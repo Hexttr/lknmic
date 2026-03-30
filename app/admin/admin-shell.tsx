@@ -19,7 +19,7 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
 
   return (
     <div className="flex min-h-screen bg-[#f0f0f0]">
-      <aside className="flex w-64 shrink-0 flex-col border-r border-black/20 bg-[#1a1a1a] text-[#f5f5f5]">
+      <aside className="flex w-64 shrink-0 flex-col border-r border-[#0a1628] bg-[#0c2847] text-[#f0f4fa]">
         <div className="border-b border-white/10 px-5 py-8">
           <Link href="/admin/patients" className="block">
             <Image

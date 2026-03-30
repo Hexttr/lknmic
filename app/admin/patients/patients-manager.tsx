@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import type { ComponentProps, FormEvent } from "react";
 
 type Doc = {
   id: string;
@@ -23,6 +24,45 @@ function formatSize(n: number): string {
   return `${(n / 1024 / 1024).toFixed(1)} МБ`;
 }
 
+function IconEdit(props: ComponentProps<"svg">) {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden
+      {...props}
+    >
+      <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
+      <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
+    </svg>
+  );
+}
+
+function IconTrash(props: ComponentProps<"svg">) {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden
+      {...props}
+    >
+      <path d="M3 6h18" />
+      <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6" />
+      <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2" />
+      <line x1="10" x2="10" y1="11" y2="17" />
+      <line x1="14" x2="14" y1="11" y2="17" />
+    </svg>
+  );
+}
+
 export function PatientsManager() {
   const [patients, setPatients] = useState<Patient[]>([]);
   const [loading, setLoading] = useState(true);
@@ -31,6 +71,17 @@ export function PatientsManager() {
   const [createPhone, setCreatePhone] = useState("");
   const [createName, setCreateName] = useState("");
   const [creating, setCreating] = useState(false);
+
+  const [editPatient, setEditPatient] = useState<Patient | null>(null);
+  const [editPhone, setEditPhone] = useState("");
+  const [editName, setEditName] = useState("");
+  const [savingEdit, setSavingEdit] = useState(false);
+
+  const closeEdit = useCallback(() => {
+    setEditPatient(null);
+    setEditPhone("");
+    setEditName("");
+  }, []);
 
   const load = useCallback(async () => {
     setError(null);
@@ -57,7 +108,49 @@ export function PatientsManager() {
     };
   }, [load]);
 
-  async function handleCreate(e: React.FormEvent) {
+  useEffect(() => {
+    if (!editPatient) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") closeEdit();
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [editPatient, closeEdit]);
+
+  function openEdit(p: Patient) {
+    setEditPatient(p);
+    setEditPhone(p.phone);
+    setEditName(p.fullName ?? "");
+    setError(null);
+  }
+
+  async function submitEdit(e: FormEvent) {
+    e.preventDefault();
+    if (!editPatient) return;
+    setSavingEdit(true);
+    setError(null);
+    try {
+      const res = await fetch(`/api/admin/patients/${editPatient.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          phone: editPhone,
+          fullName: editName,
+        }),
+      });
+      const data = (await res.json()) as { error?: string };
+      if (!res.ok) {
+        setError(data.error ?? "Не удалось сохранить");
+        return;
+      }
+      closeEdit();
+      await load();
+    } finally {
+      setSavingEdit(false);
+    }
+  }
+
+  async function handleCreate(e: FormEvent) {
     e.preventDefault();
     setCreating(true);
     setError(null);
@@ -80,12 +173,21 @@ export function PatientsManager() {
     }
   }
 
-  async function saveName(patientId: string, fullName: string) {
-    await fetch(`/api/admin/patients/${patientId}`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ fullName }),
-    });
+  async function deletePatient(p: Patient) {
+    const label = (p.fullName?.trim() || p.phone).slice(0, 80);
+    if (
+      !confirm(
+        `Вы точно хотите удалить карточку пациента «${label}»? Все прикреплённые файлы будут удалены безвозвратно.`,
+      )
+    ) {
+      return;
+    }
+    setError(null);
+    const res = await fetch(`/api/admin/patients/${p.id}`, { method: "DELETE" });
+    if (!res.ok) {
+      setError("Не удалось удалить карточку");
+      return;
+    }
     await load();
   }
 
@@ -185,28 +287,47 @@ export function PatientsManager() {
       {loading ? (
         <p className="mt-8 text-zinc-500">Загрузка…</p>
       ) : (
-        <ul className="mt-6 flex flex-col gap-4">
+        <ul className="mt-6 grid grid-cols-1 gap-4 md:grid-cols-2">
           {patients.map((p) => (
             <li
               key={p.id}
-              className="rounded-lg border border-zinc-200 bg-white p-5 shadow-sm"
+              className="relative rounded-lg border border-zinc-200 bg-white p-5 pt-12 shadow-sm"
             >
-              <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-                <div>
-                  <PatientNameEditor
-                    key={`${p.id}-${p.fullName ?? ""}`}
-                    initialName={p.fullName ?? ""}
-                    onSave={(name) => void saveName(p.id, name)}
-                  />
-                  <p className="mt-1 font-mono text-sm text-zinc-800">{p.phone}</p>
-                  <p className="mt-1 text-xs text-zinc-500">
-                    В системе с{" "}
-                    {new Date(p.createdAt).toLocaleString("ru-RU", {
-                      dateStyle: "short",
-                      timeStyle: "short",
-                    })}
-                  </p>
-                </div>
+              <div className="absolute right-3 top-3 flex gap-1">
+                <button
+                  type="button"
+                  title="Редактировать"
+                  onClick={() => openEdit(p)}
+                  className="rounded-md p-2 text-zinc-500 transition hover:bg-zinc-100 hover:text-[#0c2847]"
+                >
+                  <IconEdit className="h-5 w-5" />
+                  <span className="sr-only">Редактировать</span>
+                </button>
+                <button
+                  type="button"
+                  title="Удалить"
+                  onClick={() => void deletePatient(p)}
+                  className="rounded-md p-2 text-zinc-500 transition hover:bg-red-50 hover:text-red-600"
+                >
+                  <IconTrash className="h-5 w-5" />
+                  <span className="sr-only">Удалить</span>
+                </button>
+              </div>
+
+              <div>
+                <p className="pr-2 text-lg font-semibold text-[#1a1a1a]">
+                  {p.fullName?.trim() || (
+                    <span className="font-normal text-zinc-400">ФИО не указано</span>
+                  )}
+                </p>
+                <p className="mt-1 font-mono text-sm text-zinc-800">{p.phone}</p>
+                <p className="mt-1 text-xs text-zinc-500">
+                  В системе с{" "}
+                  {new Date(p.createdAt).toLocaleString("ru-RU", {
+                    dateStyle: "short",
+                    timeStyle: "short",
+                  })}
+                </p>
               </div>
 
               <div className="mt-4 border-t border-zinc-100 pt-4">
@@ -262,49 +383,63 @@ export function PatientsManager() {
       {!loading && patients.length === 0 && (
         <p className="mt-8 text-zinc-500">Пациенты не найдены.</p>
       )}
+
+      {editPatient && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="edit-patient-title"
+          onClick={() => closeEdit()}
+        >
+          <div
+            className="w-full max-w-md rounded-lg border border-zinc-200 bg-white p-6 shadow-xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h2 id="edit-patient-title" className="text-lg font-semibold text-[#1a1a1a]">
+              Редактировать пациента
+            </h2>
+            <form onSubmit={submitEdit} className="mt-4 flex flex-col gap-4">
+              <label className="flex flex-col gap-1 text-sm">
+                <span className="text-zinc-700">Телефон +7</span>
+                <input
+                  type="tel"
+                  required
+                  value={editPhone}
+                  onChange={(e) => setEditPhone(e.target.value)}
+                  className="rounded-md border border-zinc-300 px-3 py-2 text-zinc-900"
+                />
+              </label>
+              <label className="flex flex-col gap-1 text-sm">
+                <span className="text-zinc-700">ФИО</span>
+                <input
+                  type="text"
+                  value={editName}
+                  onChange={(e) => setEditName(e.target.value)}
+                  placeholder="Необязательно"
+                  className="rounded-md border border-zinc-300 px-3 py-2 text-zinc-900"
+                />
+              </label>
+              <div className="mt-2 flex flex-wrap justify-end gap-2">
+                <button
+                  type="button"
+                  onClick={closeEdit}
+                  className="rounded-md border border-zinc-300 px-4 py-2 text-sm font-medium text-zinc-700 hover:bg-zinc-50"
+                >
+                  Отмена
+                </button>
+                <button
+                  type="submit"
+                  disabled={savingEdit}
+                  className="rounded-md bg-[#ee0000] px-4 py-2 text-sm font-medium text-white hover:bg-[#cc0000] disabled:opacity-50"
+                >
+                  {savingEdit ? "Сохранение…" : "Сохранить"}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
-  );
-}
-
-function PatientNameEditor({
-  initialName,
-  onSave,
-}: {
-  initialName: string;
-  onSave: (name: string) => void;
-}) {
-  const [value, setValue] = useState(initialName);
-  const [editing, setEditing] = useState(false);
-
-  if (editing) {
-    return (
-      <div className="flex flex-wrap items-center gap-2">
-        <input
-          autoFocus
-          className="min-w-[200px] rounded border border-zinc-300 px-2 py-1 text-lg font-medium text-zinc-900"
-          value={value}
-          onChange={(e) => setValue(e.target.value)}
-          onBlur={() => {
-            setEditing(false);
-            void onSave(value.trim());
-          }}
-          onKeyDown={(e) => {
-            if (e.key === "Enter") {
-              (e.target as HTMLInputElement).blur();
-            }
-          }}
-        />
-      </div>
-    );
-  }
-
-  return (
-    <button
-      type="button"
-      className="text-left text-lg font-semibold text-[#1a1a1a] hover:text-[#ee0000]"
-      onClick={() => setEditing(true)}
-    >
-      {value.trim() || "ФИО не указано — нажмите, чтобы ввести"}
-    </button>
   );
 }

@@ -37,7 +37,12 @@ export async function GET(_request: NextRequest, { params }: Params) {
     return NextResponse.json({ error: "forbidden" }, { status: 403 });
   }
 
-  const abs = absoluteUploadPath(doc.storedPath);
+  let abs: string;
+  try {
+    abs = absoluteUploadPath(doc.storedPath);
+  } catch {
+    return NextResponse.json({ error: "invalid_path" }, { status: 404 });
+  }
   try {
     await stat(abs);
   } catch {

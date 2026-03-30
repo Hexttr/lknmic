@@ -26,7 +26,7 @@ export async function DELETE(_request: NextRequest, { params }: Params) {
   try {
     await unlink(absoluteUploadPath(doc.storedPath));
   } catch {
-    // ignore
+    // missing file or invalid path — still delete DB row below
   }
 
   await prisma.patientDocument.delete({ where: { id: docId } });

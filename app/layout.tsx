@@ -13,8 +13,11 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Личный кабинет пациента",
+  title: "Личный кабинет пациента НМИЦ Здоровья Детей",
   description: "Вход по номеру телефона",
+  icons: {
+    icon: "/favicon.png",
+  },
 };
 
 export default function RootLayout({

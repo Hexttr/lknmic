@@ -13,5 +13,15 @@ export async function ensureUploadDir(): Promise<void> {
 }
 
 export function absoluteUploadPath(relative: string): string {
-  return path.join(UPLOAD_DIR, relative);
+  if (path.isAbsolute(relative)) {
+    throw new Error("invalid stored path");
+  }
+  const normalized = path.normalize(relative);
+  const abs = path.resolve(UPLOAD_DIR, normalized);
+  const root = path.resolve(UPLOAD_DIR);
+  const rel = path.relative(root, abs);
+  if (rel.startsWith("..") || path.isAbsolute(rel)) {
+    throw new Error("path traversal");
+  }
+  return abs;
 }
