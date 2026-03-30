@@ -23,6 +23,8 @@
 # misc
 .DS_Store
 *.pem
+/dev.db
+/prisma/dev.db
 
 # debug
 npm-debug.log*
@@ -39,3 +41,11 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+/app/generated/prisma
+
+# deploy secrets
+deploy/.env
+deploy/.env.*
+__pycache__/
+*.pyc
