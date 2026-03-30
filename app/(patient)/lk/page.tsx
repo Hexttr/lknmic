@@ -1,4 +1,5 @@
 import { Role } from "@prisma/client";
+import Image from "next/image";
 import { prisma } from "@/lib/prisma";
 import { getIronSession } from "iron-session";
 import { cookies } from "next/headers";
@@ -38,6 +39,16 @@ export default async function LkPage() {
     <>
       {showAdminBanner && <ReturnToAdminBanner />}
       <div className="mx-auto flex max-w-2xl flex-col gap-10 px-4 py-10">
+        <div className="flex justify-center">
+          <Image
+            src="/logo.png"
+            alt="НМИЦ здоровья детей"
+            width={180}
+            height={72}
+            className="h-auto w-auto max-w-[220px] object-contain"
+            priority
+          />
+        </div>
       <header className="flex flex-wrap items-start justify-between gap-4 border-b border-zinc-200 pb-8">
         <div className="min-w-0 flex-1">
           <p className="text-sm font-medium text-zinc-500">Личный кабинет</p>
