@@ -5,6 +5,8 @@ export type SessionData = {
   userId?: string;
   isLoggedIn: boolean;
   role?: Role;
+  /** Администратор смотрит ЛК как пациент (доступ к /lk, без /admin). */
+  patientMode?: boolean;
 };
 
 function sessionPassword(): string {

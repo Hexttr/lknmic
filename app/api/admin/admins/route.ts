@@ -1,40 +1,27 @@
-import { Role } from "@prisma/client";
 import { NextRequest, NextResponse } from "next/server";
+import { Role } from "@prisma/client";
 import { getAdminSession } from "@/lib/admin-session";
 import { normalizePhoneRu } from "@/lib/phone";
 import { prisma } from "@/lib/prisma";
 
-export async function GET(request: NextRequest) {
+export async function GET() {
   const admin = await getAdminSession();
   if (!admin.ok) {
     return NextResponse.json({ error: "forbidden" }, { status: admin.status });
   }
 
-  const q = request.nextUrl.searchParams.get("q")?.trim() ?? "";
-  const digits = q.replace(/\D/g, "");
-
-  const patients = await prisma.user.findMany({
-    where: {
-      role: { in: [Role.PATIENT, Role.ADMIN] },
-      ...(digits.length > 0
-        ? { phone: { contains: digits } }
-        : {}),
-    },
-    orderBy: { createdAt: "desc" },
-    include: {
-      documents: {
-        orderBy: { createdAt: "desc" },
-        select: {
-          id: true,
-          originalName: true,
-          size: true,
-          createdAt: true,
-        },
-      },
+  const admins = await prisma.user.findMany({
+    where: { role: Role.ADMIN },
+    orderBy: { createdAt: "asc" },
+    select: {
+      id: true,
+      phone: true,
+      fullName: true,
+      createdAt: true,
     },
   });
 
-  return NextResponse.json({ patients });
+  return NextResponse.json({ admins });
 }
 
 export async function POST(request: NextRequest) {
@@ -71,24 +58,20 @@ export async function POST(request: NextRequest) {
     where: { phone },
     create: {
       phone,
+      role: Role.ADMIN,
       fullName: fullName || null,
-      role: Role.PATIENT,
     },
     update: {
+      role: Role.ADMIN,
       ...(fullName ? { fullName } : {}),
     },
-    include: {
-      documents: {
-        orderBy: { createdAt: "desc" },
-        select: {
-          id: true,
-          originalName: true,
-          size: true,
-          createdAt: true,
-        },
-      },
+    select: {
+      id: true,
+      phone: true,
+      fullName: true,
+      createdAt: true,
     },
   });
 
-  return NextResponse.json({ patient: user });
+  return NextResponse.json({ admin: user });
 }

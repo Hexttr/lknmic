@@ -40,7 +40,7 @@ export async function PATCH(request: NextRequest, { params }: Params) {
   }
 
   const existing = await prisma.user.findFirst({
-    where: { id, role: Role.PATIENT },
+    where: { id, role: { in: [Role.PATIENT, Role.ADMIN] } },
   });
   if (!existing) {
     return NextResponse.json({ error: "not_found" }, { status: 404 });
@@ -93,11 +93,21 @@ export async function DELETE(_request: NextRequest, { params }: Params) {
   const { id } = await params;
 
   const user = await prisma.user.findFirst({
-    where: { id, role: Role.PATIENT },
+    where: { id, role: { in: [Role.PATIENT, Role.ADMIN] } },
     include: { documents: true },
   });
   if (!user) {
     return NextResponse.json({ error: "not_found" }, { status: 404 });
+  }
+
+  if (user.role === Role.ADMIN) {
+    const adminCount = await prisma.user.count({ where: { role: Role.ADMIN } });
+    if (adminCount <= 1) {
+      return NextResponse.json(
+        { error: "Нельзя удалить последнего администратора" },
+        { status: 400 },
+      );
+    }
   }
 
   for (const doc of user.documents) {

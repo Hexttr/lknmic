@@ -4,6 +4,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { Role } from "@prisma/client";
 import { getAdminSession } from "@/lib/admin-session";
 import { prisma } from "@/lib/prisma";
+import { MAX_UPLOAD_BYTES } from "@/lib/upload-limits";
 import {
   absoluteUploadPath,
   documentStoragePath,
@@ -11,8 +12,6 @@ import {
 } from "@/lib/uploads";
 
 export const runtime = "nodejs";
-
-const MAX_BYTES = 25 * 1024 * 1024;
 
 type Params = { params: Promise<{ id: string }> };
 
@@ -25,7 +24,7 @@ export async function POST(request: NextRequest, { params }: Params) {
   const { id: userId } = await params;
 
   const user = await prisma.user.findFirst({
-    where: { id: userId, role: Role.PATIENT },
+    where: { id: userId, role: { in: [Role.PATIENT, Role.ADMIN] } },
   });
   if (!user) {
     return NextResponse.json({ error: "not_found" }, { status: 404 });
@@ -39,7 +38,7 @@ export async function POST(request: NextRequest, { params }: Params) {
 
   const originalName = (file as File).name || "file";
   const size = file.size;
-  if (size > MAX_BYTES) {
+  if (size > MAX_UPLOAD_BYTES) {
     return NextResponse.json({ error: "file_too_large" }, { status: 400 });
   }
 

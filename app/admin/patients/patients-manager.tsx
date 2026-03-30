@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import type { ComponentProps, FormEvent } from "react";
+import { MAX_UPLOAD_MB } from "@/lib/upload-limits";
 
 type Doc = {
   id: string;
@@ -14,6 +15,7 @@ type Patient = {
   id: string;
   phone: string;
   fullName: string | null;
+  role: "PATIENT" | "ADMIN";
   createdAt: string;
   documents: Doc[];
 };
@@ -175,17 +177,22 @@ export function PatientsManager() {
 
   async function deletePatient(p: Patient) {
     const label = (p.fullName?.trim() || p.phone).slice(0, 80);
+    const adminNote =
+      p.role === "ADMIN"
+        ? " Это администратор: при единственном админе в системе удаление будет отклонено."
+        : "";
     if (
       !confirm(
-        `Вы точно хотите удалить карточку пациента «${label}»? Все прикреплённые файлы будут удалены безвозвратно.`,
+        `Вы точно хотите удалить карточку «${label}»? Все прикреплённые файлы будут удалены безвозвратно.${adminNote}`,
       )
     ) {
       return;
     }
     setError(null);
     const res = await fetch(`/api/admin/patients/${p.id}`, { method: "DELETE" });
+    const data = (await res.json().catch(() => ({}))) as { error?: string };
     if (!res.ok) {
-      setError("Не удалось удалить карточку");
+      setError(data.error ?? "Не удалось удалить карточку");
       return;
     }
     await load();
@@ -198,8 +205,13 @@ export function PatientsManager() {
       method: "POST",
       body: fd,
     });
+    const data = (await res.json().catch(() => ({}))) as { error?: string };
     if (!res.ok) {
-      setError("Не удалось загрузить файл");
+      if (data.error === "file_too_large") {
+        setError(`Файл слишком большой: максимум ${MAX_UPLOAD_MB} МБ.`);
+        return;
+      }
+      setError(data.error ?? "Не удалось загрузить файл");
       return;
     }
     await load();
@@ -222,8 +234,13 @@ export function PatientsManager() {
     <div>
       <h1 className="text-2xl font-semibold text-[#1a1a1a]">Пациенты</h1>
       <p className="mt-1 text-sm text-zinc-600">
-        Учётные записи по номеру телефона. Файлы видны пациенту в личном кабинете
-        после первого входа.
+        Учётные записи по номеру телефона. В списке также отображаются
+        администраторы (пометка «Админ») — к ним можно прикреплять файлы для
+        личного кабинета. Файлы видны пользователю после входа.
+      </p>
+      <p className="mt-2 text-sm text-zinc-600">
+        Загрузка файлов: до {MAX_UPLOAD_MB} МБ на файл, без ограничения по
+        типам (PDF, изображения, архивы и т.д.).
       </p>
 
       <form
@@ -315,9 +332,16 @@ export function PatientsManager() {
               </div>
 
               <div>
-                <p className="pr-2 text-lg font-semibold text-[#1a1a1a]">
-                  {p.fullName?.trim() || (
-                    <span className="font-normal text-zinc-400">ФИО не указано</span>
+                <p className="flex flex-wrap items-center gap-2 pr-2 text-lg font-semibold text-[#1a1a1a]">
+                  <span>
+                    {p.fullName?.trim() || (
+                      <span className="font-normal text-zinc-400">ФИО не указано</span>
+                    )}
+                  </span>
+                  {p.role === "ADMIN" && (
+                    <span className="rounded bg-[#0c2847] px-2 py-0.5 text-xs font-medium uppercase tracking-wide text-white">
+                      Админ
+                    </span>
                   )}
                 </p>
                 <p className="mt-1 font-mono text-sm text-zinc-800">{p.phone}</p>
@@ -333,6 +357,9 @@ export function PatientsManager() {
               <div className="mt-4 border-t border-zinc-100 pt-4">
                 <p className="text-xs font-semibold uppercase text-zinc-500">
                   Файлы
+                  <span className="ml-2 font-normal normal-case text-zinc-400">
+                    (до {MAX_UPLOAD_MB} МБ)
+                  </span>
                 </p>
                 <ul className="mt-2 space-y-2">
                   {p.documents.map((d) => (

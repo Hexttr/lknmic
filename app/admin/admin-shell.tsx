@@ -17,6 +17,19 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
     window.location.href = "/login";
   }
 
+  async function enterPatientMode() {
+    const res = await fetch("/api/admin/patient-mode", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ enabled: true }),
+    });
+    if (res.ok) {
+      window.location.href = "/lk";
+      return;
+    }
+    window.alert("Не удалось переключить режим. Обновите страницу и попробуйте снова.");
+  }
+
   return (
     <div className="flex min-h-screen bg-[#f0f0f0]">
       <aside className="flex w-64 shrink-0 flex-col border-r border-[#0a1628] bg-[#0c2847] text-[#f0f4fa]">
@@ -55,6 +68,17 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
           })}
         </nav>
         <div className="border-t border-white/10 p-3">
+          <button
+            type="button"
+            onClick={() => void enterPatientMode()}
+            className="mb-2 w-full rounded-md px-4 py-3 text-left text-sm text-white/85 hover:bg-white/10 hover:text-white"
+          >
+            Войти как пациент
+          </button>
+          <p className="mb-3 px-1 text-xs leading-snug text-white/45">
+            Откроется личный кабинет с вашими данными; панель администратора
+            будет недоступна, пока не вернётесь из ЛК.
+          </p>
           <button
             type="button"
             onClick={() => void logout()}

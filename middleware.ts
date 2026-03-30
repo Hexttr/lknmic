@@ -21,6 +21,9 @@ export async function middleware(request: NextRequest) {
     if (session.role !== Role.ADMIN) {
       return NextResponse.redirect(new URL("/lk", request.url));
     }
+    if (session.patientMode) {
+      return NextResponse.redirect(new URL("/lk", request.url));
+    }
     return response;
   }
 
@@ -28,7 +31,7 @@ export async function middleware(request: NextRequest) {
     if (!session.isLoggedIn) {
       return NextResponse.redirect(new URL("/login", request.url));
     }
-    if (session.role === Role.ADMIN) {
+    if (session.role === Role.ADMIN && !session.patientMode) {
       return NextResponse.redirect(new URL("/admin", request.url));
     }
     return response;

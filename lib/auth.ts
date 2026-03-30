@@ -19,6 +19,7 @@ export async function finalizeLoginForPhone(phone: string) {
   session.userId = user.id;
   session.isLoggedIn = true;
   session.role = user.role;
+  session.patientMode = false;
   await session.save();
 
   return user;

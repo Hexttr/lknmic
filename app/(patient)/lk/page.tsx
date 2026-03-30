@@ -1,3 +1,4 @@
+import { Role } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { getIronSession } from "iron-session";
 import { cookies } from "next/headers";
@@ -5,6 +6,7 @@ import { redirect } from "next/navigation";
 import type { SessionData } from "@/lib/session";
 import { getSessionOptions } from "@/lib/session";
 import { LogoutButton } from "./logout-button";
+import { ReturnToAdminBanner } from "./return-to-admin-banner";
 
 function formatSize(n: number): string {
   if (n < 1024) return `${n} Б`;
@@ -29,8 +31,13 @@ export default async function LkPage() {
   });
   if (!user) redirect("/login");
 
+  const showAdminBanner =
+    session.role === Role.ADMIN && session.patientMode === true;
+
   return (
-    <div className="mx-auto flex max-w-2xl flex-col gap-10 px-4 py-10">
+    <>
+      {showAdminBanner && <ReturnToAdminBanner />}
+      <div className="mx-auto flex max-w-2xl flex-col gap-10 px-4 py-10">
       <header className="flex flex-wrap items-start justify-between gap-4 border-b border-zinc-200 pb-8">
         <div className="min-w-0 flex-1">
           <p className="text-sm font-medium text-zinc-500">Личный кабинет</p>
@@ -99,6 +106,7 @@ export default async function LkPage() {
           </ul>
         )}
       </section>
-    </div>
+      </div>
+    </>
   );
 }
