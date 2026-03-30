@@ -37,7 +37,7 @@ EXCLUDE_DIRS = {
     ".git",
     "deploy",
 }
-EXCLUDE_FILES = {".env", "dev.db"}
+EXCLUDE_FILES = {".env", "dev.db", "prod.db"}
 
 
 def should_add(path: Path, rel: str) -> bool:
@@ -136,8 +136,8 @@ def main() -> None:
         )
         print("DNS lk.nmiczd.ru:\n", out, err)
 
-        # Каталог приложения
-        run(client, f"mkdir -p {REMOTE_DIR}/data")
+        # Каталог приложения и загрузки файлов
+        run(client, f"mkdir -p {REMOTE_DIR}/data/uploads && chmod 775 {REMOTE_DIR}/data/uploads")
         sftp_put(client, tarball, REMOTE_TAR)
 
         # Распаковка
@@ -147,28 +147,33 @@ def main() -> None:
             timeout=120,
         )
 
-        # SESSION_SECRET на сервере
-        code, session_secret, _ = run(
-            client, "openssl rand -hex 32", timeout=10
+        # .env: не перезаписываем существующий (сохраняем SESSION_SECRET и ключи)
+        code, env_check, _ = run(
+            client, f"test -f {REMOTE_DIR}/.env && echo has || echo no", timeout=10
         )
-        if code != 0 or not session_secret.strip():
-            session_secret = "fallback-" + "x" * 40
-        session_secret = session_secret.strip()
-
-        # .env на сервере (без вывода секрета в лог)
-        env_lines = [
-            f'DATABASE_URL="file:./data/prod.db"',
-            f'SESSION_SECRET="{session_secret}"',
-            f'SMS_RU_API_ID="{sms_id}"',
-            'SMSRU_WEBHOOK_SECRET=""',
-        ]
-        env_content = "\n".join(env_lines) + "\n"
-        sftp = client.open_sftp()
-        try:
-            with sftp.file(f"{REMOTE_DIR}/.env", "w") as f:
-                f.write(env_content)
-        finally:
-            sftp.close()
+        if "has" not in env_check:
+            code, session_secret, _ = run(
+                client, "openssl rand -hex 32", timeout=10
+            )
+            if code != 0 or not session_secret.strip():
+                session_secret = "fallback-" + "x" * 40
+            session_secret = session_secret.strip()
+            env_lines = [
+                f'DATABASE_URL="file:./data/prod.db"',
+                f'SESSION_SECRET="{session_secret}"',
+                f'SMS_RU_API_ID="{sms_id}"',
+                'SMSRU_WEBHOOK_SECRET=""',
+            ]
+            env_content = "\n".join(env_lines) + "\n"
+            sftp = client.open_sftp()
+            try:
+                with sftp.file(f"{REMOTE_DIR}/.env", "w") as f:
+                    f.write(env_content)
+            finally:
+                sftp.close()
+            print("Создан новый .env на сервере.")
+        else:
+            print("Существующий .env на сервере сохранён (не перезаписан).")
 
         # Установка и сборка
         install = f"""
@@ -177,6 +182,7 @@ cd {REMOTE_DIR}
 # Не задавать NODE_ENV=production до npm ci — иначе не ставятся devDependencies (Tailwind/PostCSS).
 npm ci
 npx prisma migrate deploy
+npm run db:seed
 npm run build
 """
         code, out, err = run(client, install, timeout=900)
@@ -198,39 +204,55 @@ npm run build
         if code != 0:
             sys.exit(code)
 
-        # Nginx: только новый файл
-        sftp = client.open_sftp()
-        try:
-            with open(DEPLOY / "nginx-lk.nmiczd.ru.conf", "rb") as lf:
-                with sftp.file("/tmp/nginx-lk.nmiczd.ru.conf", "w") as rf:
-                    rf.write(lf.read().decode("utf-8"))
-        finally:
-            sftp.close()
-
-        run(
+        # Nginx: не затираем конфиг с SSL (certbot). Первичная установка — шаблон + certbot.
+        code, ngx, _ = run(
             client,
-            "cp /tmp/nginx-lk.nmiczd.ru.conf /etc/nginx/sites-available/lk.nmiczd.ru "
-            "&& ln -sf /etc/nginx/sites-available/lk.nmiczd.ru /etc/nginx/sites-enabled/lk.nmiczd.ru "
-            "&& nginx -t && systemctl reload nginx",
-            timeout=60,
+            "test -f /etc/nginx/sites-available/lk.nmiczd.ru && "
+            "grep -q ssl_certificate /etc/nginx/sites-available/lk.nmiczd.ru "
+            "&& echo ssl || echo fresh",
+            timeout=10,
         )
+        if "ssl" in ngx:
+            print("Nginx: уже есть SSL — шаблон не копируем, только лимит тела запроса.")
+            run(
+                client,
+                r"""if ! grep -q 'client_max_body_size' /etc/nginx/sites-available/lk.nmiczd.ru; then
+  sed -i '/server_name lk.nmiczd.ru;/a\    client_max_body_size 25m;' /etc/nginx/sites-available/lk.nmiczd.ru
+fi
+nginx -t && systemctl reload nginx""",
+                timeout=60,
+            )
+        else:
+            sftp = client.open_sftp()
+            try:
+                with open(DEPLOY / "nginx-lk.nmiczd.ru.conf", "rb") as lf:
+                    with sftp.file("/tmp/nginx-lk.nmiczd.ru.conf", "w") as rf:
+                        rf.write(lf.read().decode("utf-8"))
+            finally:
+                sftp.close()
 
-        # HTTPS
-        cert_cmd = (
-            "certbot --nginx -d lk.nmiczd.ru --non-interactive --agree-tos "
-            "--register-unsafely-without-email --redirect"
-        )
-        code, out, err = run(client, cert_cmd, timeout=120)
-        print(out, err)
-        if code != 0:
-            print(
-                "Certbot завершился с ошибкой (часто из-за DNS или порта 80). "
-                "HTTP уже должен работать: http://lk.nmiczd.ru",
-                file=sys.stderr,
+            run(
+                client,
+                "cp /tmp/nginx-lk.nmiczd.ru.conf /etc/nginx/sites-available/lk.nmiczd.ru "
+                "&& ln -sf /etc/nginx/sites-available/lk.nmiczd.ru /etc/nginx/sites-enabled/lk.nmiczd.ru "
+                "&& nginx -t && systemctl reload nginx",
+                timeout=60,
             )
 
-        code, out, err = run(client, "nginx -t && systemctl reload nginx", timeout=30)
-        print(out, err)
+            cert_cmd = (
+                "certbot --nginx -d lk.nmiczd.ru --non-interactive --agree-tos "
+                "--register-unsafely-without-email --redirect"
+            )
+            code, out, err = run(client, cert_cmd, timeout=120)
+            print(out, err)
+            if code != 0:
+                print(
+                    "Certbot завершился с ошибкой (часто из-за DNS или порта 80). "
+                    "HTTP уже должен работать: http://lk.nmiczd.ru",
+                    file=sys.stderr,
+                )
+
+            run(client, "nginx -t && systemctl reload nginx", timeout=30)
 
     finally:
         client.close()

@@ -30,50 +30,70 @@ export default async function LkPage() {
   if (!user) redirect("/login");
 
   return (
-    <div className="mx-auto flex max-w-2xl flex-col gap-8 px-4 py-12">
-      <header className="flex flex-wrap items-center justify-between gap-4 border-b border-zinc-200 pb-6">
-        <div>
-          <h1 className="text-2xl font-semibold text-zinc-900">
-            Личный кабинет
-          </h1>
-          <p className="mt-1 text-sm text-zinc-600">
-            {user.fullName ? (
-              <>
-                <span className="font-medium text-zinc-800">
-                  {user.fullName}
-                </span>
-                <span className="text-zinc-500"> · </span>
-              </>
-            ) : null}
-            {user.phone}
-          </p>
+    <div className="mx-auto flex max-w-2xl flex-col gap-10 px-4 py-10">
+      <header className="flex flex-wrap items-start justify-between gap-4 border-b border-zinc-200 pb-8">
+        <div className="min-w-0 flex-1">
+          <p className="text-sm font-medium text-zinc-500">Личный кабинет</p>
+          {user.fullName?.trim() ? (
+            <h1 className="mt-2 text-3xl font-semibold tracking-tight text-zinc-900">
+              {user.fullName.trim()}
+            </h1>
+          ) : (
+            <h1 className="mt-2 text-2xl font-semibold text-zinc-800">
+              Пациент
+            </h1>
+          )}
+          <p className="mt-3 font-mono text-sm text-zinc-600">{user.phone}</p>
+          {!user.fullName?.trim() && (
+            <p className="mt-2 max-w-md text-sm text-amber-800/90">
+              ФИО в профиле не заполнено. Если нужно исправить данные,
+              обратитесь в регистратуру.
+            </p>
+          )}
         </div>
         <LogoutButton />
       </header>
 
-      <section className="rounded-xl border border-zinc-200 bg-zinc-50/80 p-6">
-        <h2 className="text-sm font-semibold uppercase tracking-wide text-zinc-500">
-          Документы
+      <section>
+        <h2 className="text-lg font-semibold text-zinc-900">
+          Документы для вас
         </h2>
+        <p className="mt-1 text-sm text-zinc-600">
+          Файлы, которые администратор прикрепил к вашей учётной записи.
+        </p>
+
         {user.documents.length === 0 ? (
-          <p className="mt-3 text-sm text-zinc-600">
-            Пока нет прикреплённых файлов. Когда врач или администратор добавит
-            документы, они появятся здесь.
-          </p>
+          <div className="mt-6 rounded-xl border border-dashed border-zinc-300 bg-white p-8 text-center">
+            <p className="text-sm text-zinc-600">
+              Пока нет прикреплённых файлов. Когда появятся новые документы, они
+              отобразятся в этом списке.
+            </p>
+          </div>
         ) : (
-          <ul className="mt-4 space-y-3">
+          <ul className="mt-6 flex flex-col gap-3">
             {user.documents.map((d) => (
-              <li key={d.id}>
+              <li
+                key={d.id}
+                className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-zinc-200 bg-white px-4 py-4 shadow-sm"
+              >
+                <div className="min-w-0 flex-1">
+                  <p className="truncate font-medium text-zinc-900">
+                    {d.originalName}
+                  </p>
+                  <p className="mt-1 text-xs text-zinc-500">
+                    {formatSize(d.size)} ·{" "}
+                    {new Date(d.createdAt).toLocaleString("ru-RU", {
+                      dateStyle: "short",
+                      timeStyle: "short",
+                    })}
+                  </p>
+                </div>
                 <a
                   href={`/api/documents/${d.id}/download`}
-                  className="text-[#0066cc] underline hover:text-[#004499]"
+                  className="shrink-0 rounded-lg bg-zinc-900 px-4 py-2 text-sm font-medium text-white transition hover:bg-zinc-800"
                 >
-                  {d.originalName}
+                  Скачать
                 </a>
-                <span className="ml-2 text-sm text-zinc-500">
-                  {formatSize(d.size)} ·{" "}
-                  {new Date(d.createdAt).toLocaleDateString("ru-RU")}
-                </span>
               </li>
             ))}
           </ul>
