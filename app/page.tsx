@@ -1,6 +1,7 @@
 import { getIronSession } from "iron-session";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
+import { Role } from "@prisma/client";
 import type { SessionData } from "@/lib/session";
 import { getSessionOptions } from "@/lib/session";
 
@@ -9,6 +10,9 @@ export default async function Home() {
     await cookies(),
     getSessionOptions(),
   );
-  if (session.isLoggedIn) redirect("/lk");
+  if (session.isLoggedIn) {
+    if (session.role === Role.ADMIN) redirect("/admin");
+    redirect("/lk");
+  }
   redirect("/login");
 }

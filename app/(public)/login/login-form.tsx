@@ -119,9 +119,10 @@ export function LoginForm() {
         });
         if (cancelled) return;
         if (res.ok) {
-          const data = (await res.json()) as { ok?: boolean };
+          const data = (await res.json()) as { ok?: boolean; role?: string };
           if (data.ok) {
-            router.replace("/lk");
+            const dest = data.role === "ADMIN" ? "/admin" : "/lk";
+            router.replace(dest);
             router.refresh();
             return;
           }

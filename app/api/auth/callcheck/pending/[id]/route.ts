@@ -19,9 +19,9 @@ export async function GET(_request: NextRequest, { params }: Params) {
   }
 
   if (pending.verified) {
-    await finalizeLoginForPhone(pending.phone);
+    const user = await finalizeLoginForPhone(pending.phone);
     await prisma.pendingAuth.delete({ where: { id: pending.id } });
-    return NextResponse.json({ ok: true });
+    return NextResponse.json({ ok: true, role: user.role });
   }
 
   let status: Awaited<ReturnType<typeof callcheckStatus>>;
@@ -48,9 +48,9 @@ export async function GET(_request: NextRequest, { params }: Params) {
   }
 
   if (status.confirmed) {
-    await finalizeLoginForPhone(pending.phone);
+    const user = await finalizeLoginForPhone(pending.phone);
     await prisma.pendingAuth.delete({ where: { id: pending.id } });
-    return NextResponse.json({ ok: true });
+    return NextResponse.json({ ok: true, role: user.role });
   }
 
   return NextResponse.json({ ok: false, pending: true });

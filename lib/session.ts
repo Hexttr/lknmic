@@ -1,8 +1,10 @@
+import type { Role } from "@prisma/client";
 import type { SessionOptions } from "iron-session";
 
 export type SessionData = {
   userId?: string;
   isLoggedIn: boolean;
+  role?: Role;
 };
 
 function sessionPassword(): string {

@@ -6,6 +6,12 @@ import type { SessionData } from "@/lib/session";
 import { getSessionOptions } from "@/lib/session";
 import { LogoutButton } from "./logout-button";
 
+function formatSize(n: number): string {
+  if (n < 1024) return `${n} Б`;
+  if (n < 1024 * 1024) return `${(n / 1024).toFixed(1)} КБ`;
+  return `${(n / 1024 / 1024).toFixed(1)} МБ`;
+}
+
 export default async function LkPage() {
   const session = await getIronSession<SessionData>(
     await cookies(),
@@ -15,6 +21,11 @@ export default async function LkPage() {
 
   const user = await prisma.user.findUnique({
     where: { id: session.userId },
+    include: {
+      documents: {
+        orderBy: { createdAt: "desc" },
+      },
+    },
   });
   if (!user) redirect("/login");
 
@@ -26,16 +37,47 @@ export default async function LkPage() {
             Личный кабинет
           </h1>
           <p className="mt-1 text-sm text-zinc-600">
-            Вы вошли как {user.phone}
+            {user.fullName ? (
+              <>
+                <span className="font-medium text-zinc-800">
+                  {user.fullName}
+                </span>
+                <span className="text-zinc-500"> · </span>
+              </>
+            ) : null}
+            {user.phone}
           </p>
         </div>
         <LogoutButton />
       </header>
+
       <section className="rounded-xl border border-zinc-200 bg-zinc-50/80 p-6">
-        <p className="text-zinc-700">
-          Здесь позже появятся записи, документы и другие данные. Разделы
-          настроим отдельно.
-        </p>
+        <h2 className="text-sm font-semibold uppercase tracking-wide text-zinc-500">
+          Документы
+        </h2>
+        {user.documents.length === 0 ? (
+          <p className="mt-3 text-sm text-zinc-600">
+            Пока нет прикреплённых файлов. Когда врач или администратор добавит
+            документы, они появятся здесь.
+          </p>
+        ) : (
+          <ul className="mt-4 space-y-3">
+            {user.documents.map((d) => (
+              <li key={d.id}>
+                <a
+                  href={`/api/documents/${d.id}/download`}
+                  className="text-[#0066cc] underline hover:text-[#004499]"
+                >
+                  {d.originalName}
+                </a>
+                <span className="ml-2 text-sm text-zinc-500">
+                  {formatSize(d.size)} ·{" "}
+                  {new Date(d.createdAt).toLocaleDateString("ru-RU")}
+                </span>
+              </li>
+            ))}
+          </ul>
+        )}
       </section>
     </div>
   );

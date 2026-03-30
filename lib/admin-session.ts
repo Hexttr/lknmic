@@ -1,20 +1,22 @@
 import { getIronSession } from "iron-session";
 import { cookies } from "next/headers";
-import { redirect } from "next/navigation";
 import { Role } from "@prisma/client";
 import type { SessionData } from "@/lib/session";
 import { getSessionOptions } from "@/lib/session";
-import { LoginForm } from "./login-form";
 
-export default async function LoginPage() {
+export async function getAdminSession(): Promise<
+  | { ok: true; userId: string }
+  | { ok: false; status: 401 | 403 }
+> {
   const session = await getIronSession<SessionData>(
     await cookies(),
     getSessionOptions(),
   );
-  if (session.isLoggedIn) {
-    if (session.role === Role.ADMIN) redirect("/admin");
-    redirect("/lk");
+  if (!session.isLoggedIn || !session.userId) {
+    return { ok: false, status: 401 };
   }
-
-  return <LoginForm />;
+  if (session.role !== Role.ADMIN) {
+    return { ok: false, status: 403 };
+  }
+  return { ok: true, userId: session.userId };
 }
