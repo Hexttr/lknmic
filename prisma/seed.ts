@@ -1,3 +1,4 @@
+import "dotenv/config";
 import { Role } from "@prisma/client";
 import { prisma } from "../lib/prisma";
 
