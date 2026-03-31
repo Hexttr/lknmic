@@ -210,7 +210,7 @@ export function AppointmentForm() {
                       onChange={() => setSpecialistId(t.id)}
                       className="sr-only"
                     />
-                    <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-zinc-100 text-[#0c2847]">
+                    <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border-2 border-emerald-600 bg-white text-[#0c2847] shadow-sm">
                       <SpecialistIcon iconKey={t.iconKey} className="h-5 w-5" />
                     </span>
                     <span className="flex min-w-0 flex-col gap-0.5">

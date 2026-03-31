@@ -76,7 +76,7 @@ function ActiveAppointmentCard({
           : "Предварительные дата и время. После звонка администратора они могут измениться."}
       </p>
       <div className="mt-3 flex flex-wrap items-start gap-3">
-        <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg bg-[#0c2847]/10 text-[#0c2847]">
+        <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg border-2 border-emerald-600 bg-white text-[#0c2847] shadow-sm">
           <SpecialistIcon iconKey={item.specialistType.iconKey} className="h-6 w-6" />
         </span>
         <div className="min-w-0 flex-1">
