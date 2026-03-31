@@ -1,6 +1,6 @@
 "use client";
 
-import { Bot, Shield, Settings } from "lucide-react";
+import { Bot, Download, Shield, Settings } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
 import {
   useCallback,
@@ -19,7 +19,7 @@ type AdminRow = {
 
 type AnthropicKeySource = "env" | "database" | "none";
 
-type SettingsTab = "admins" | "ai";
+type SettingsTab = "admins" | "ai" | "import";
 
 export function SettingsManager() {
   const router = useRouter();
@@ -27,7 +27,9 @@ export function SettingsManager() {
 
   const tabFromUrl = useMemo((): SettingsTab => {
     const t = searchParams.get("tab");
-    return t === "ai" ? "ai" : "admins";
+    if (t === "ai") return "ai";
+    if (t === "import") return "import";
+    return "admins";
   }, [searchParams]);
 
   const [admins, setAdmins] = useState<AdminRow[]>([]);
@@ -51,7 +53,7 @@ export function SettingsManager() {
       if (next === "admins") {
         q.delete("tab");
       } else {
-        q.set("tab", "ai");
+        q.set("tab", next);
       }
       const qs = q.toString();
       router.push(qs ? `/admin/settings?${qs}` : "/admin/settings", {
@@ -231,26 +233,38 @@ export function SettingsManager() {
         <button
           type="button"
           onClick={() => setTab("admins")}
-          className={`inline-flex items-center gap-2 border-b-2 px-4 py-2.5 text-sm font-medium transition ${
+          className={`inline-flex items-center gap-2 border-b-2 px-4 py-3 text-lg transition ${
             tabFromUrl === "admins"
-              ? "border-[#ee0000] text-[#0c2847]"
-              : "border-transparent text-zinc-500 hover:text-zinc-800"
+              ? "border-[#ee0000] font-semibold text-zinc-900"
+              : "border-transparent font-medium text-zinc-900 hover:bg-zinc-50"
           }`}
         >
-          <Shield className="h-4 w-4" aria-hidden />
+          <Shield className="h-5 w-5 shrink-0 text-zinc-900" aria-hidden />
           Администраторы
         </button>
         <button
           type="button"
           onClick={() => setTab("ai")}
-          className={`inline-flex items-center gap-2 border-b-2 px-4 py-2.5 text-sm font-medium transition ${
+          className={`inline-flex items-center gap-2 border-b-2 px-4 py-3 text-lg transition ${
             tabFromUrl === "ai"
-              ? "border-[#ee0000] text-[#0c2847]"
-              : "border-transparent text-zinc-500 hover:text-zinc-800"
+              ? "border-[#ee0000] font-semibold text-zinc-900"
+              : "border-transparent font-medium text-zinc-900 hover:bg-zinc-50"
           }`}
         >
-          <Bot className="h-4 w-4" aria-hidden />
+          <Bot className="h-5 w-5 shrink-0 text-zinc-900" aria-hidden />
           AI
+        </button>
+        <button
+          type="button"
+          onClick={() => setTab("import")}
+          className={`inline-flex items-center gap-2 border-b-2 px-4 py-3 text-lg transition ${
+            tabFromUrl === "import"
+              ? "border-[#ee0000] font-semibold text-zinc-900"
+              : "border-transparent font-medium text-zinc-900 hover:bg-zinc-50"
+          }`}
+        >
+          <Download className="h-5 w-5 shrink-0 text-zinc-900" aria-hidden />
+          Импорт
         </button>
       </nav>
 
@@ -332,8 +346,7 @@ export function SettingsManager() {
       )}
 
       {tabFromUrl === "ai" && (
-        <div className="mt-8 flex max-w-[640px] flex-col gap-10">
-          <section>
+        <section className="mt-8 max-w-[640px]">
             <h2 className="text-sm font-semibold uppercase tracking-wide text-zinc-500">
               ИИ-подбор услуг (Anthropic)
             </h2>
@@ -405,66 +418,69 @@ export function SettingsManager() {
                 </button>
               </div>
             </form>
-          </section>
+        </section>
+      )}
 
-          <section>
-            <h2 className="text-sm font-semibold uppercase tracking-wide text-zinc-500">
-              Импорт прайса с nczd.ru
-            </h2>
-            <p className="mt-2 text-sm text-zinc-600">
-              Загрузка дерева разделов и таблиц цен с сайта. На локальной машине
-              выполняется через тот же скрипт, что и в терминале:{" "}
-              <code className="rounded bg-zinc-100 px-1 font-mono text-xs">
-                npm run import:prices
-              </code>
-              . Кнопки ниже запускают импорт на сервере разработки (может
-              занять несколько минут при полном импорте).
-            </p>
-            <div className="mt-4 flex flex-wrap gap-2">
-              <button
-                type="button"
-                disabled={importRunning}
-                onClick={() =>
-                  void runPriceImport({ dryRun: true, maxSections: 3 })
-                }
-                className="rounded-md border border-zinc-300 bg-white px-4 py-2 text-sm font-medium text-zinc-800 hover:bg-zinc-50 disabled:opacity-50"
-              >
-                {importRunning ? "Выполняется…" : "Тест: dry-run, 3 раздела"}
-              </button>
-              <button
-                type="button"
-                disabled={importRunning}
-                onClick={() =>
-                  void runPriceImport({ dryRun: false, maxSections: 3 })
-                }
-                className="rounded-md bg-emerald-800 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-900 disabled:opacity-50"
-              >
-                Импорт в БД (3 раздела)
-              </button>
-              <button
-                type="button"
-                disabled={importRunning}
-                onClick={() => void runPriceImport({ dryRun: false })}
-                className="rounded-md bg-[#ee0000] px-4 py-2 text-sm font-medium text-white hover:bg-[#cc0000] disabled:opacity-50"
-              >
-                Полный импорт
-              </button>
-              <button
-                type="button"
-                disabled={importRunning}
-                onClick={() => void runPriceImport({ dryRun: false, clear: true })}
-                className="rounded-md border border-red-300 bg-red-50 px-4 py-2 text-sm font-medium text-red-800 hover:bg-red-100 disabled:opacity-50"
-              >
-                Очистить и полный импорт
-              </button>
-            </div>
-            {importLog && (
-              <pre className="mt-4 max-h-80 overflow-auto rounded-lg border border-zinc-200 bg-zinc-950 p-4 text-xs leading-relaxed text-zinc-100">
-                {importLog}
-              </pre>
-            )}
-          </section>
-        </div>
+      {tabFromUrl === "import" && (
+        <section className="mt-8 max-w-[640px]">
+          <h2 className="text-sm font-semibold uppercase tracking-wide text-zinc-500">
+            Импорт прайса с nczd.ru
+          </h2>
+          <p className="mt-2 text-sm text-zinc-600">
+            Загрузка дерева разделов и таблиц цен с сайта. На локальной машине
+            выполняется через тот же скрипт, что и в терминале:{" "}
+            <code className="rounded bg-zinc-100 px-1 font-mono text-xs">
+              npm run import:prices
+            </code>
+            . Кнопки ниже запускают импорт на сервере разработки (может занять
+            несколько минут при полном импорте).
+          </p>
+          <div className="mt-4 flex flex-wrap gap-2">
+            <button
+              type="button"
+              disabled={importRunning}
+              onClick={() =>
+                void runPriceImport({ dryRun: true, maxSections: 3 })
+              }
+              className="rounded-md border border-zinc-300 bg-white px-4 py-2 text-sm font-medium text-zinc-800 hover:bg-zinc-50 disabled:opacity-50"
+            >
+              {importRunning ? "Выполняется…" : "Тест: dry-run, 3 раздела"}
+            </button>
+            <button
+              type="button"
+              disabled={importRunning}
+              onClick={() =>
+                void runPriceImport({ dryRun: false, maxSections: 3 })
+              }
+              className="rounded-md bg-emerald-800 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-900 disabled:opacity-50"
+            >
+              Импорт в БД (3 раздела)
+            </button>
+            <button
+              type="button"
+              disabled={importRunning}
+              onClick={() => void runPriceImport({ dryRun: false })}
+              className="rounded-md bg-[#ee0000] px-4 py-2 text-sm font-medium text-white hover:bg-[#cc0000] disabled:opacity-50"
+            >
+              Полный импорт
+            </button>
+            <button
+              type="button"
+              disabled={importRunning}
+              onClick={() =>
+                void runPriceImport({ dryRun: false, clear: true })
+              }
+              className="rounded-md border border-red-300 bg-red-50 px-4 py-2 text-sm font-medium text-red-800 hover:bg-red-100 disabled:opacity-50"
+            >
+              Очистить и полный импорт
+            </button>
+          </div>
+          {importLog && (
+            <pre className="mt-4 max-h-80 overflow-auto rounded-lg border border-zinc-200 bg-zinc-950 p-4 text-xs leading-relaxed text-zinc-100">
+              {importLog}
+            </pre>
+          )}
+        </section>
       )}
     </div>
   );
