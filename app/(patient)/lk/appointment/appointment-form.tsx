@@ -30,26 +30,32 @@ export function AppointmentForm() {
   );
   const [submitting, setSubmitting] = useState(false);
   const [done, setDone] = useState(false);
-  const [blockedByActive, setBlockedByActive] = useState(false);
+  const [bookedSpecialistIds, setBookedSpecialistIds] = useState<Set<string>>(
+    () => new Set(),
+  );
 
   const load = useCallback(async () => {
     setError(null);
-    const [specRes, activeRes] = await Promise.all([
+    const [specRes, aptRes] = await Promise.all([
       fetch("/api/specialist-types", { cache: "no-store" }),
       fetch("/api/patient/appointments", { cache: "no-store" }),
     ]);
     if (!specRes.ok) {
       setError("Не удалось загрузить список специалистов");
-      setBlockedByActive(false);
+      setBookedSpecialistIds(new Set());
       return;
     }
     const data = (await specRes.json()) as { specialistTypes: Spec[] };
     setTypes(data.specialistTypes);
-    if (activeRes.ok) {
-      const apt = (await activeRes.json()) as { active?: unknown };
-      setBlockedByActive(Boolean(apt.active));
+    if (aptRes.ok) {
+      const j = (await aptRes.json()) as {
+        appointments?: { specialistTypeId: string }[];
+      };
+      setBookedSpecialistIds(
+        new Set((j.appointments ?? []).map((a) => a.specialistTypeId)),
+      );
     } else {
-      setBlockedByActive(false);
+      setBookedSpecialistIds(new Set());
     }
   }, []);
 
@@ -66,10 +72,13 @@ export function AppointmentForm() {
   }, [load]);
 
   useEffect(() => {
-    if (types.length > 0 && specialistId === "") {
-      setSpecialistId(types[0].id);
+    if (types.length === 0) return;
+    const free = types.filter((t) => !bookedSpecialistIds.has(t.id));
+    if (free.length === 0) return;
+    if (specialistId === "" || bookedSpecialistIds.has(specialistId)) {
+      setSpecialistId(free[0].id);
     }
-  }, [types, specialistId]);
+  }, [types, bookedSpecialistIds, specialistId]);
 
   const minDate = useMemo(() => todayISODate(), []);
 
@@ -132,8 +141,9 @@ export function AppointmentForm() {
         <h1 className="text-xl font-semibold text-zinc-900">Запись на приём</h1>
       </div>
       <p className="mt-2 text-sm text-zinc-600">
-        Укажите желаемую дату, удобный часовой интервал и специалиста. Мы
-        обработаем заявку и перезвоним для уточнения.
+        Можно подать заявки к разным специалистам по отдельности. К одному
+        специалисту — не более одной активной заявки. Укажите дату, интервал и
+        врача; мы перезвоним для уточнения.
       </p>
 
       {error && (
@@ -144,24 +154,14 @@ export function AppointmentForm() {
 
       {loading ? (
         <p className="mt-8 text-zinc-500">Загрузка…</p>
-      ) : blockedByActive ? (
-        <div className="mt-8 rounded-xl border border-sky-200 bg-sky-50/90 px-4 py-5 text-sm text-zinc-800">
-          <p className="font-medium text-zinc-900">
-            У вас уже есть активная заявка на приём.
-          </p>
-          <p className="mt-2 text-zinc-600">
-            Откройте личный кабинет, чтобы посмотреть детали или отменить запись.
-          </p>
-          <Link
-            href="/lk"
-            className="mt-4 inline-flex rounded-lg bg-[#0c2847] px-4 py-2 text-sm font-medium text-white hover:bg-[#0a2238]"
-          >
-            Перейти в личный кабинет
-          </Link>
-        </div>
       ) : types.length === 0 ? (
         <p className="mt-8 text-sm text-amber-800">
           Список специалистов пока пуст. Обратитесь в регистратуру.
+        </p>
+      ) : types.every((t) => bookedSpecialistIds.has(t.id)) ? (
+        <p className="mt-8 text-sm text-amber-900">
+          По всем специалистам у вас уже есть активные заявки. Отмените одну из
+          них в личном кабинете, если нужно изменить запись.
         </p>
       ) : (
         <>
@@ -170,29 +170,42 @@ export function AppointmentForm() {
               Специалист
             </legend>
             <div className="mt-3 grid max-h-64 grid-cols-1 gap-2 overflow-y-auto sm:grid-cols-2">
-              {types.map((t) => (
-                <label
-                  key={t.id}
-                  className={`flex cursor-pointer items-center gap-3 rounded-xl border px-3 py-3 text-sm transition ${
-                    specialistId === t.id
-                      ? "border-[#0c2847] bg-[#0c2847]/5 ring-1 ring-[#0c2847]"
-                      : "border-zinc-200 hover:border-zinc-300"
-                  }`}
-                >
-                  <input
-                    type="radio"
-                    name="specialist"
-                    value={t.id}
-                    checked={specialistId === t.id}
-                    onChange={() => setSpecialistId(t.id)}
-                    className="sr-only"
-                  />
-                  <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-zinc-100 text-[#0c2847]">
-                    <SpecialistIcon iconKey={t.iconKey} className="h-5 w-5" />
-                  </span>
-                  <span className="font-medium text-zinc-900">{t.name}</span>
-                </label>
-              ))}
+              {types.map((t) => {
+                const booked = bookedSpecialistIds.has(t.id);
+                return (
+                  <label
+                    key={t.id}
+                    className={`flex items-center gap-3 rounded-xl border px-3 py-3 text-sm transition ${
+                      booked
+                        ? "cursor-not-allowed border-zinc-200 bg-zinc-50/80 opacity-70"
+                        : specialistId === t.id
+                          ? "cursor-pointer border-[#0c2847] bg-[#0c2847]/5 ring-1 ring-[#0c2847]"
+                          : "cursor-pointer border-zinc-200 hover:border-zinc-300"
+                    }`}
+                  >
+                    <input
+                      type="radio"
+                      name="specialist"
+                      value={t.id}
+                      checked={specialistId === t.id}
+                      disabled={booked}
+                      onChange={() => setSpecialistId(t.id)}
+                      className="sr-only"
+                    />
+                    <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-zinc-100 text-[#0c2847]">
+                      <SpecialistIcon iconKey={t.iconKey} className="h-5 w-5" />
+                    </span>
+                    <span className="flex min-w-0 flex-col gap-0.5">
+                      <span className="font-medium text-zinc-900">{t.name}</span>
+                      {booked ? (
+                        <span className="text-xs font-normal text-zinc-500">
+                          Уже есть активная заявка
+                        </span>
+                      ) : null}
+                    </span>
+                  </label>
+                );
+              })}
             </div>
           </fieldset>
 
@@ -239,7 +252,9 @@ export function AppointmentForm() {
           <div className="mt-8 flex flex-wrap gap-3">
             <button
               type="submit"
-              disabled={submitting}
+              disabled={
+                submitting || bookedSpecialistIds.has(specialistId)
+              }
               className="rounded-lg bg-[#ee0000] px-6 py-3 text-sm font-semibold text-white hover:bg-[#cc0000] disabled:opacity-50"
             >
               {submitting ? "Отправка…" : "Записаться"}

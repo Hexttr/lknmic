@@ -6,14 +6,14 @@ import { prisma } from "@/lib/prisma";
 
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 
-/** Активная заявка пациента (для ЛК и формы записи). */
+/** Активные заявки пациента (для ЛК и формы записи). */
 export async function GET() {
   const lk = await getLkSession();
   if (!lk.ok) {
     return NextResponse.json({ error: "forbidden" }, { status: lk.status });
   }
 
-  const active = await prisma.appointmentRequest.findFirst({
+  const appointments = await prisma.appointmentRequest.findMany({
     where: {
       userId: lk.userId,
       status: {
@@ -26,7 +26,7 @@ export async function GET() {
     },
   });
 
-  return NextResponse.json({ active });
+  return NextResponse.json({ appointments });
 }
 
 export async function POST(request: NextRequest) {
@@ -69,19 +69,20 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Специалист не найден" }, { status: 400 });
   }
 
-  const existingActive = await prisma.appointmentRequest.findFirst({
+  const duplicateSameSpecialist = await prisma.appointmentRequest.findFirst({
     where: {
       userId: lk.userId,
+      specialistTypeId,
       status: {
         in: [AppointmentStatus.NEW, AppointmentStatus.AWAITING_PATIENT],
       },
     },
   });
-  if (existingActive) {
+  if (duplicateSameSpecialist) {
     return NextResponse.json(
       {
         error:
-          "У вас уже есть активная заявка. Отмените её в личном кабинете или дождитесь завершения.",
+          "У вас уже есть активная заявка к этому специалисту. Отмените её в личном кабинете или дождитесь обработки.",
       },
       { status: 400 },
     );

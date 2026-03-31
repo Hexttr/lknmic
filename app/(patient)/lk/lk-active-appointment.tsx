@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { SpecialistIcon } from "@/lib/specialist-icons";
 import { formatDateRuFromIso } from "@/lib/date-format-ru";
 
@@ -28,27 +28,23 @@ function displayWhen(a: LkActiveAppointmentData): { dateLabel: string; timeLabel
   };
 }
 
-export function LkActiveAppointment({
-  initial,
+function ActiveAppointmentCard({
+  item,
+  onRemoved,
 }: {
-  initial: LkActiveAppointmentData | null;
+  item: LkActiveAppointmentData;
+  onRemoved: (id: string) => void;
 }) {
   const router = useRouter();
-  const [data, setData] = useState<LkActiveAppointmentData | null>(initial);
   const [cancelling, setCancelling] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  if (!data) {
-    return null;
-  }
-
-  const when = displayWhen(data);
-  const exactAdmin = Boolean(data.adminDate?.trim() && data.adminTime?.trim());
+  const when = displayWhen(item);
+  const exactAdmin = Boolean(item.adminDate?.trim() && item.adminTime?.trim());
 
   async function cancel() {
-    if (!data) return;
-    if (!confirm("Отменить запись на приём?")) return;
-    const id = data.id;
+    if (!confirm("Отменить эту запись на приём?")) return;
+    const id = item.id;
     setError(null);
     setCancelling(true);
     try {
@@ -57,10 +53,14 @@ export function LkActiveAppointment({
       });
       const j = (await res.json()) as { error?: string };
       if (!res.ok) {
-        setError(j.error === "cannot_cancel" ? "Нельзя отменить эту заявку." : "Не удалось отменить");
+        setError(
+          j.error === "cannot_cancel"
+            ? "Нельзя отменить эту заявку."
+            : "Не удалось отменить",
+        );
         return;
       }
-      setData(null);
+      onRemoved(id);
       router.refresh();
     } finally {
       setCancelling(false);
@@ -68,19 +68,18 @@ export function LkActiveAppointment({
   }
 
   return (
-    <section className="rounded-2xl border border-sky-200 bg-sky-50/90 p-5 shadow-sm">
-      <h2 className="text-lg font-semibold text-zinc-900">Ваша заявка на приём</h2>
-      <p className="mt-1 text-sm text-zinc-600">
+    <div className="rounded-xl border border-emerald-100/90 bg-white px-4 py-4 shadow-sm">
+      <p className="mt-1 text-xs text-zinc-600 sm:text-sm">
         {exactAdmin
           ? "Дата и время согласованы с клиникой."
           : "Предварительные дата и время. После звонка администратора они могут измениться."}
       </p>
-      <div className="mt-4 flex flex-wrap items-start gap-3 rounded-xl border border-white/80 bg-white px-4 py-4 shadow-sm">
+      <div className="mt-3 flex flex-wrap items-start gap-3">
         <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg bg-[#0c2847]/10 text-[#0c2847]">
-          <SpecialistIcon iconKey={data.specialistType.iconKey} className="h-6 w-6" />
+          <SpecialistIcon iconKey={item.specialistType.iconKey} className="h-6 w-6" />
         </span>
         <div className="min-w-0 flex-1">
-          <p className="font-medium text-zinc-900">{data.specialistType.name}</p>
+          <p className="font-medium text-zinc-900">{item.specialistType.name}</p>
           <p className="mt-2 text-sm text-zinc-800">
             <span className="text-zinc-500">Дата: </span>
             {when.dateLabel}
@@ -96,14 +95,55 @@ export function LkActiveAppointment({
           {error}
         </p>
       )}
-      <button
-        type="button"
-        onClick={() => void cancel()}
-        disabled={cancelling}
-        className="mt-4 rounded-lg border border-zinc-300 bg-white px-4 py-2 text-sm font-medium text-zinc-800 shadow-sm hover:bg-zinc-50 disabled:opacity-50"
-      >
-        {cancelling ? "Отмена…" : "Отменить запись"}
-      </button>
+      <div className="mt-4 flex justify-center">
+        <button
+          type="button"
+          onClick={() => void cancel()}
+          disabled={cancelling}
+          className="w-full max-w-md rounded-lg bg-[#ee0000] px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-[#cc0000] disabled:opacity-50"
+        >
+          {cancelling ? "Отмена…" : "Отменить запись"}
+        </button>
+      </div>
+    </div>
+  );
+}
+
+export function LkActiveAppointments({
+  initial,
+}: {
+  initial: LkActiveAppointmentData[];
+}) {
+  const [items, setItems] = useState(initial);
+
+  useEffect(() => {
+    setItems(initial);
+  }, [initial]);
+
+  if (items.length === 0) {
+    return null;
+  }
+
+  return (
+    <section className="rounded-2xl border border-emerald-200 bg-emerald-50/95 p-5 shadow-sm">
+      <h2 className="text-lg font-semibold text-zinc-900">
+        {items.length === 1 ? "Ваша заявка на приём" : "Ваши заявки на приём"}
+      </h2>
+      <p className="mt-1 text-sm text-emerald-950/80">
+        Вы можете подать заявки к разным специалистам. Каждую активную заявку можно
+        отменить отдельно.
+      </p>
+      <div className="mt-4 flex flex-col gap-4">
+        {items.map((item) => (
+          <ActiveAppointmentCard
+            key={item.id}
+            item={item}
+            onRemoved={(id) =>
+              setItems((prev) => prev.filter((x) => x.id !== id))
+            }
+          />
+        ))}
+      </div>
     </section>
   );
 }
