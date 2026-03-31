@@ -1,5 +1,6 @@
 import { Role } from "@prisma/client";
 import Image from "next/image";
+import Link from "next/link";
 import { prisma } from "@/lib/prisma";
 import { getIronSession } from "iron-session";
 import { cookies } from "next/headers";
@@ -52,25 +53,22 @@ export default async function LkPage() {
       <header className="flex flex-wrap items-start justify-between gap-4 border-b border-zinc-200 pb-8">
         <div className="min-w-0 flex-1">
           <p className="text-sm font-medium text-zinc-500">Личный кабинет</p>
-          {user.fullName?.trim() ? (
-            <h1 className="mt-2 text-3xl font-semibold tracking-tight text-zinc-900">
-              {user.fullName.trim()}
-            </h1>
-          ) : (
-            <h1 className="mt-2 text-2xl font-semibold text-zinc-800">
-              Пациент
-            </h1>
-          )}
+          <h1 className="mt-2 text-2xl font-semibold tracking-tight text-zinc-900">
+            Добро пожаловать
+          </h1>
           <p className="mt-3 font-mono text-sm text-zinc-600">{user.phone}</p>
-          {!user.fullName?.trim() && (
-            <p className="mt-2 max-w-md text-sm text-amber-800/90">
-              ФИО в профиле не заполнено. Если нужно исправить данные,
-              обратитесь в регистратуру.
-            </p>
-          )}
         </div>
         <LogoutButton />
       </header>
+
+      <div className="flex justify-center">
+        <Link
+          href="/lk/appointment"
+          className="inline-flex w-full max-w-md items-center justify-center rounded-xl bg-[#ee0000] px-6 py-4 text-center text-base font-semibold text-white shadow-sm transition hover:bg-[#cc0000] sm:w-auto"
+        >
+          Запись на приём
+        </Link>
+      </div>
 
       <section>
         <h2 className="text-lg font-semibold text-zinc-900">

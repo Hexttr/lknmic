@@ -8,6 +8,7 @@ import { useCallback, useEffect, useState } from "react";
 
 const nav = [
   { href: "/admin/patients", label: "Пациенты" },
+  { href: "/admin/specialists", label: "Специалисты" },
   { href: "/admin/settings", label: "Настройки" },
 ];
 

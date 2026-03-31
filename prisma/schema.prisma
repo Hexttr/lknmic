@@ -22,6 +22,31 @@ model User {
   verifiedAt DateTime?
   createdAt  DateTime  @default(now())
   documents  PatientDocument[]
+  appointmentRequests AppointmentRequest[]
+}
+
+/// Тип специалиста / услуги (справочник для записи на приём)
+model SpecialistType {
+  id            String               @id @default(cuid())
+  name          String
+  iconKey       String
+  sortOrder     Int                  @default(0)
+  createdAt     DateTime             @default(now())
+  appointments  AppointmentRequest[]
+}
+
+/// Заявка на приём из ЛК пациента
+model AppointmentRequest {
+  id               String         @id @default(cuid())
+  userId           String
+  user             User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  specialistTypeId String
+  specialistType   SpecialistType @relation(fields: [specialistTypeId], references: [id], onDelete: Restrict)
+  /// Дата приёма YYYY-MM-DD (локальный календарный день)
+  date             String
+  /// Время HH:mm
+  timeSlot         String
+  createdAt        DateTime       @default(now())
 }
 
 model PatientDocument {

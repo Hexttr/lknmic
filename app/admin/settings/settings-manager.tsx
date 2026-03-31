@@ -14,7 +14,6 @@ export function SettingsManager() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [phone, setPhone] = useState("");
-  const [fullName, setFullName] = useState("");
   const [saving, setSaving] = useState(false);
 
   const load = useCallback(async () => {
@@ -48,7 +47,7 @@ export function SettingsManager() {
       const res = await fetch("/api/admin/admins", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ phone, fullName }),
+        body: JSON.stringify({ phone }),
       });
       const data = (await res.json()) as { error?: string };
       if (!res.ok) {
@@ -56,7 +55,6 @@ export function SettingsManager() {
         return;
       }
       setPhone("");
-      setFullName("");
       await load();
     } finally {
       setSaving(false);
@@ -116,9 +114,6 @@ export function SettingsManager() {
               >
                 <div>
                   <p className="font-mono text-zinc-900">{a.phone}</p>
-                  {a.fullName?.trim() && (
-                    <p className="mt-0.5 text-zinc-600">{a.fullName.trim()}</p>
-                  )}
                 </div>
                 <button
                   type="button"
@@ -128,9 +123,7 @@ export function SettingsManager() {
                       ? "Должен остаться хотя бы один администратор"
                       : undefined
                   }
-                  onClick={() =>
-                    void removeAdmin(a.id, a.fullName?.trim() || a.phone)
-                  }
+                  onClick={() => void removeAdmin(a.id, a.phone)}
                   className="shrink-0 text-xs font-medium text-red-600 hover:underline disabled:cursor-not-allowed disabled:opacity-40 disabled:no-underline"
                 >
                   Снять роль
@@ -156,16 +149,6 @@ export function SettingsManager() {
                 placeholder="+7 900 000-00-00"
                 value={phone}
                 onChange={(e) => setPhone(e.target.value)}
-                className="rounded-md border border-zinc-300 px-3 py-2 text-zinc-900"
-              />
-            </label>
-            <label className="flex min-w-[200px] flex-1 flex-col gap-1 text-sm">
-              <span className="text-zinc-700">ФИО (необязательно)</span>
-              <input
-                type="text"
-                placeholder="Для подписи в списке"
-                value={fullName}
-                onChange={(e) => setFullName(e.target.value)}
                 className="rounded-md border border-zinc-300 px-3 py-2 text-zinc-900"
               />
             </label>

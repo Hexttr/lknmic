@@ -71,18 +71,15 @@ export function PatientsManager() {
   const [error, setError] = useState<string | null>(null);
   const [search, setSearch] = useState("");
   const [createPhone, setCreatePhone] = useState("");
-  const [createName, setCreateName] = useState("");
   const [creating, setCreating] = useState(false);
 
   const [editPatient, setEditPatient] = useState<Patient | null>(null);
   const [editPhone, setEditPhone] = useState("");
-  const [editName, setEditName] = useState("");
   const [savingEdit, setSavingEdit] = useState(false);
 
   const closeEdit = useCallback(() => {
     setEditPatient(null);
     setEditPhone("");
-    setEditName("");
   }, []);
 
   const load = useCallback(async () => {
@@ -122,7 +119,6 @@ export function PatientsManager() {
   function openEdit(p: Patient) {
     setEditPatient(p);
     setEditPhone(p.phone);
-    setEditName(p.fullName ?? "");
     setError(null);
   }
 
@@ -137,7 +133,6 @@ export function PatientsManager() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           phone: editPhone,
-          fullName: editName,
         }),
       });
       const data = (await res.json()) as { error?: string };
@@ -160,7 +155,7 @@ export function PatientsManager() {
       const res = await fetch("/api/admin/patients", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ phone: createPhone, fullName: createName }),
+        body: JSON.stringify({ phone: createPhone }),
       });
       const data = (await res.json()) as { error?: string };
       if (!res.ok) {
@@ -168,7 +163,6 @@ export function PatientsManager() {
         return;
       }
       setCreatePhone("");
-      setCreateName("");
       await load();
     } finally {
       setCreating(false);
@@ -176,7 +170,7 @@ export function PatientsManager() {
   }
 
   async function deletePatient(p: Patient) {
-    const label = (p.fullName?.trim() || p.phone).slice(0, 80);
+    const label = p.phone.slice(0, 80);
     const adminNote =
       p.role === "ADMIN"
         ? " Это администратор: при единственном админе в системе удаление будет отклонено."
@@ -262,16 +256,6 @@ export function PatientsManager() {
               className="rounded-md border border-zinc-300 px-3 py-2 text-zinc-900"
             />
           </label>
-          <label className="flex min-w-[200px] flex-1 flex-col gap-1 text-sm">
-            <span className="text-zinc-700">ФИО</span>
-            <input
-              type="text"
-              placeholder="Иванов Иван Иванович"
-              value={createName}
-              onChange={(e) => setCreateName(e.target.value)}
-              className="rounded-md border border-zinc-300 px-3 py-2 text-zinc-900"
-            />
-          </label>
           <button
             type="submit"
             disabled={creating}
@@ -333,18 +317,13 @@ export function PatientsManager() {
 
               <div>
                 <p className="flex flex-wrap items-center gap-2 pr-2 text-lg font-semibold text-[#1a1a1a]">
-                  <span>
-                    {p.fullName?.trim() || (
-                      <span className="font-normal text-zinc-400">ФИО не указано</span>
-                    )}
-                  </span>
+                  <span className="font-mono tracking-tight">{p.phone}</span>
                   {p.role === "ADMIN" && (
                     <span className="rounded bg-[#0c2847] px-2 py-0.5 text-xs font-medium uppercase tracking-wide text-white">
                       Админ
                     </span>
                   )}
                 </p>
-                <p className="mt-1 font-mono text-sm text-zinc-800">{p.phone}</p>
                 <p className="mt-1 text-xs text-zinc-500">
                   В системе с{" "}
                   {new Date(p.createdAt).toLocaleString("ru-RU", {
@@ -434,16 +413,6 @@ export function PatientsManager() {
                   required
                   value={editPhone}
                   onChange={(e) => setEditPhone(e.target.value)}
-                  className="rounded-md border border-zinc-300 px-3 py-2 text-zinc-900"
-                />
-              </label>
-              <label className="flex flex-col gap-1 text-sm">
-                <span className="text-zinc-700">ФИО</span>
-                <input
-                  type="text"
-                  value={editName}
-                  onChange={(e) => setEditName(e.target.value)}
-                  placeholder="Необязательно"
                   className="rounded-md border border-zinc-300 px-3 py-2 text-zinc-900"
                 />
               </label>
