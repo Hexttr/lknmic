@@ -1,6 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { AppointmentStatus } from "@prisma/client";
-import { isValidHourlySlot } from "@/lib/appointment-slots";
+import {
+  APPOINTMENT_HOURLY_SLOTS,
+  filterSlotsForAppointmentDate,
+  isValidHourlySlot,
+} from "@/lib/appointment-slots";
 import { getLkSession } from "@/lib/lk-session";
 import { prisma } from "@/lib/prisma";
 
@@ -60,6 +64,18 @@ export async function POST(request: NextRequest) {
   }
   if (!isValidHourlySlot(timeSlot)) {
     return NextResponse.json({ error: "Некорректный интервал времени" }, { status: 400 });
+  }
+
+  const allowedToday = filterSlotsForAppointmentDate(
+    date,
+    APPOINTMENT_HOURLY_SLOTS,
+    new Date(),
+  );
+  if (!allowedToday.includes(timeSlot)) {
+    return NextResponse.json(
+      { error: "Это время уже недоступно. Выберите другой слот или дату." },
+      { status: 400 },
+    );
   }
 
   const spec = await prisma.specialistType.findUnique({

@@ -4,8 +4,10 @@ import { CalendarClock } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState, type FormEvent } from "react";
-import { APPOINTMENT_HOURLY_SLOTS } from "@/lib/appointment-slots";
-import { formatDateRuFromIso } from "@/lib/date-format-ru";
+import {
+  APPOINTMENT_HOURLY_SLOTS,
+  filterSlotsForAppointmentDate,
+} from "@/lib/appointment-slots";
 import { SpecialistIcon } from "@/lib/specialist-icons";
 
 type Spec = { id: string; name: string; iconKey: string };
@@ -25,9 +27,13 @@ export function AppointmentForm() {
   const [error, setError] = useState<string | null>(null);
   const [specialistId, setSpecialistId] = useState("");
   const [date, setDate] = useState(todayISODate);
-  const [timeSlot, setTimeSlot] = useState(
-    APPOINTMENT_HOURLY_SLOTS[1] ?? "09:00-10:00",
-  );
+  const [timeSlot, setTimeSlot] = useState(() => {
+    const allowed = filterSlotsForAppointmentDate(
+      todayISODate(),
+      APPOINTMENT_HOURLY_SLOTS,
+    );
+    return allowed[0] ?? APPOINTMENT_HOURLY_SLOTS[0] ?? "08:00-09:00";
+  });
   const [submitting, setSubmitting] = useState(false);
   const [done, setDone] = useState(false);
   const [bookedSpecialistIds, setBookedSpecialistIds] = useState<Set<string>>(
@@ -81,6 +87,18 @@ export function AppointmentForm() {
   }, [types, bookedSpecialistIds, specialistId]);
 
   const minDate = useMemo(() => todayISODate(), []);
+
+  const availableTimeSlots = useMemo(
+    () => filterSlotsForAppointmentDate(date, APPOINTMENT_HOURLY_SLOTS),
+    [date],
+  );
+
+  useEffect(() => {
+    if (availableTimeSlots.length === 0) return;
+    if (!availableTimeSlots.includes(timeSlot)) {
+      setTimeSlot(availableTimeSlots[0]!);
+    }
+  }, [availableTimeSlots, timeSlot]);
 
   async function onSubmit(e: FormEvent) {
     e.preventDefault();
@@ -142,7 +160,7 @@ export function AppointmentForm() {
       </div>
       <p className="mt-2 text-sm text-zinc-600">
         Можно подать заявки к разным специалистам по отдельности. К одному
-        специалисту — не более одной активной заявки. Укажите дату, интервал и
+        специалисту — не более одной активной заявки. Укажите дату, время и
         врача; мы перезвоним для уточнения.
       </p>
 
@@ -220,32 +238,32 @@ export function AppointmentForm() {
                 onChange={(e) => setDate(e.target.value)}
                 className="rounded-lg border border-zinc-300 px-3 py-2 text-zinc-900"
               />
-              <span className="text-xs text-zinc-600">
-                Формат:{" "}
-                <span className="font-medium text-zinc-800">
-                  {formatDateRuFromIso(date)}
-                </span>
-              </span>
             </label>
             <label className="flex flex-col gap-1 text-sm">
-              <span className="font-medium text-zinc-800">
-                Интервал (1 час)
-              </span>
-              <select
-                required
-                value={timeSlot}
-                onChange={(e) => setTimeSlot(e.target.value)}
-                className="rounded-lg border border-zinc-300 px-3 py-2 text-zinc-900"
-              >
-                {APPOINTMENT_HOURLY_SLOTS.map((slot) => (
-                  <option key={slot} value={slot}>
-                    {slot}
-                  </option>
-                ))}
-              </select>
-              <span className="text-xs text-zinc-500">
-                С 8:00 до 18:00, по часу
-              </span>
+              <span className="font-medium text-zinc-800">Время</span>
+              {availableTimeSlots.length === 0 ? (
+                <p className="mt-1 text-xs text-amber-800">
+                  На выбранный день свободных часов не осталось. Укажите другую
+                  дату.
+                </p>
+              ) : (
+                <select
+                  required
+                  value={
+                    availableTimeSlots.includes(timeSlot)
+                      ? timeSlot
+                      : availableTimeSlots[0]
+                  }
+                  onChange={(e) => setTimeSlot(e.target.value)}
+                  className="rounded-lg border border-zinc-300 px-3 py-2 text-zinc-900"
+                >
+                  {availableTimeSlots.map((slot) => (
+                    <option key={slot} value={slot}>
+                      {slot}
+                    </option>
+                  ))}
+                </select>
+              )}
             </label>
           </div>
 
@@ -253,7 +271,9 @@ export function AppointmentForm() {
             <button
               type="submit"
               disabled={
-                submitting || bookedSpecialistIds.has(specialistId)
+                submitting ||
+                bookedSpecialistIds.has(specialistId) ||
+                availableTimeSlots.length === 0
               }
               className="rounded-lg bg-[#ee0000] px-6 py-3 text-sm font-semibold text-white hover:bg-[#cc0000] disabled:opacity-50"
             >
