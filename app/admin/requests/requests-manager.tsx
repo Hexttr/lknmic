@@ -265,39 +265,46 @@ export function RequestsManager() {
           {archiveView ? "В архиве пока нет записей." : "Заявок пока нет."}
         </p>
       ) : (
-        <div className="mt-8 rounded-xl border border-zinc-200 bg-white shadow-sm">
-          <table className="w-full max-w-full text-left text-xs text-zinc-900 sm:text-sm">
-              <thead className="border-b border-zinc-200 bg-zinc-50 text-[10px] font-semibold uppercase leading-tight text-zinc-700 sm:text-xs">
+        <div className="mt-8 overflow-hidden rounded-xl border border-zinc-200 bg-zinc-100/80 shadow-sm">
+          <table className="w-full max-w-full border-collapse text-left text-xs text-zinc-900 sm:text-sm">
+              <thead className="border-b-2 border-zinc-300 bg-zinc-100 text-[10px] font-semibold uppercase leading-tight text-zinc-700 sm:text-xs">
                 <tr>
-                  <th className="px-2 py-2 sm:px-3">Телефон</th>
-                  <th className="px-2 py-2 sm:px-3">Поступила</th>
-                  <th className="px-2 py-2 sm:px-3">Специалист</th>
-                  <th className="px-2 py-2 sm:px-3">
+                  <th className="px-2 py-3 sm:px-3">Телефон</th>
+                  <th className="px-2 py-3 sm:px-3">Поступила</th>
+                  <th className="px-2 py-3 sm:px-3">Специалист</th>
+                  <th className="px-2 py-3 sm:px-3">
                     <span className="block normal-case">Желаемое</span>
                     <span className="font-normal normal-case text-zinc-500">
                       дата / время
                     </span>
                   </th>
-                  <th className="px-2 py-2 sm:px-3">
+                  <th className="px-2 py-3 sm:px-3">
                     <span className="block normal-case">Согласовано</span>
                     <span className="font-normal normal-case text-zinc-500">
                       дата / время
                     </span>
                   </th>
-                  <th className="px-2 py-2 text-center sm:px-3">Статус</th>
-                  <th className="px-2 py-2 sm:px-3" />
+                  <th className="px-2 py-3 text-center sm:px-3">Статус</th>
+                  <th className="px-2 py-3 sm:px-3" />
                 </tr>
               </thead>
-              <tbody className="divide-y divide-zinc-100">
-                {rows.map((r) => (
-                  <tr key={r.id} className="hover:bg-zinc-50/80">
-                    <td className="break-all px-2 py-2 font-mono text-[11px] sm:px-3 sm:text-sm">
+              <tbody>
+                {rows.map((r, index) => (
+                  <tr
+                    key={r.id}
+                    className={`border-b border-zinc-200 transition-colors last:border-b-0 ${
+                      index % 2 === 0
+                        ? "bg-white hover:bg-emerald-50/40"
+                        : "bg-zinc-50/95 hover:bg-emerald-50/50"
+                    }`}
+                  >
+                    <td className="break-all px-2 py-3 font-mono text-[11px] sm:px-3 sm:py-3.5 sm:text-sm">
                       {r.user.phone}
                     </td>
-                    <td className="px-2 py-2 text-[11px] text-zinc-800 sm:px-3 sm:text-sm">
+                    <td className="px-2 py-3 text-[11px] text-zinc-800 sm:px-3 sm:py-3.5 sm:text-sm">
                       {formatReceivedAt(r.createdAt)}
                     </td>
-                    <td className="min-w-0 px-2 py-2 sm:px-3">
+                    <td className="min-w-0 px-2 py-3 sm:px-3 sm:py-3.5">
                       <span className="inline-flex max-w-full items-center gap-1.5">
                         <SpecialistIcon
                           iconKey={r.specialistType.iconKey}
@@ -308,7 +315,7 @@ export function RequestsManager() {
                         </span>
                       </span>
                     </td>
-                    <td className="min-w-0 px-2 py-2 sm:px-3">
+                    <td className="min-w-0 px-2 py-3 sm:px-3 sm:py-3.5">
                       <div className="space-y-0.5 leading-tight">
                         <div className="whitespace-nowrap">
                           {formatDateRuFromIso(r.date)}
@@ -318,7 +325,7 @@ export function RequestsManager() {
                         </div>
                       </div>
                     </td>
-                    <td className="min-w-0 px-2 py-2 sm:px-3">
+                    <td className="min-w-0 px-2 py-3 sm:px-3 sm:py-3.5">
                       <div className="space-y-0.5 leading-tight">
                         <div>
                           {r.adminDate
@@ -330,7 +337,7 @@ export function RequestsManager() {
                         </div>
                       </div>
                     </td>
-                    <td className="px-2 py-2 text-center sm:px-3">
+                    <td className="px-2 py-3 text-center sm:px-3 sm:py-3.5">
                       <span
                         className={`inline-block max-w-full rounded-md px-1.5 py-0.5 text-[10px] font-medium sm:px-2 sm:text-xs ${
                           r.status === "ARCHIVED"
@@ -345,7 +352,7 @@ export function RequestsManager() {
                         {STATUS_LABEL[r.status]}
                       </span>
                     </td>
-                    <td className="px-2 py-2 sm:px-3">
+                    <td className="px-2 py-3 sm:px-3 sm:py-3.5">
                       <button
                         type="button"
                         onClick={() => openEdit(r)}
