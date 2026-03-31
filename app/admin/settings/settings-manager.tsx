@@ -270,7 +270,7 @@ export function SettingsManager() {
 
       {tabFromUrl === "admins" && (
         <section className="mt-8 max-w-[560px]">
-          <h2 className="text-sm font-semibold uppercase tracking-wide text-zinc-500">
+          <h2 className="text-base font-semibold text-zinc-900">
             Администраторы
           </h2>
           <p className="mt-2 text-sm text-zinc-600">
@@ -318,7 +318,7 @@ export function SettingsManager() {
             onSubmit={handleAdd}
             className="mt-8 rounded-lg border border-zinc-200 bg-white p-5 shadow-sm"
           >
-            <h3 className="text-sm font-semibold text-zinc-800">
+            <h3 className="text-sm font-semibold text-zinc-900">
               Назначить администратора
             </h3>
             <div className="mt-4 flex flex-col gap-4 sm:flex-row sm:flex-wrap sm:items-end">
@@ -347,7 +347,7 @@ export function SettingsManager() {
 
       {tabFromUrl === "ai" && (
         <section className="mt-8 max-w-[640px]">
-            <h2 className="text-sm font-semibold uppercase tracking-wide text-zinc-500">
+            <h2 className="text-base font-semibold text-zinc-900">
               ИИ-подбор услуг (Anthropic)
             </h2>
             <p className="mt-2 text-sm text-zinc-600">
@@ -423,7 +423,7 @@ export function SettingsManager() {
 
       {tabFromUrl === "import" && (
         <section className="mt-8 max-w-[640px]">
-          <h2 className="text-sm font-semibold uppercase tracking-wide text-zinc-500">
+          <h2 className="text-base font-semibold text-zinc-900">
             Импорт прайса с nczd.ru
           </h2>
           <p className="mt-2 text-sm text-zinc-600">
