@@ -1,14 +1,22 @@
 """
-Deploy lk.nmiczd.ru from GitHub — set SSH_PASS in env.
+Deploy lk.nmiczd.ru from GitHub — SSH_PASS из окружения или из deploy/.env.
 Preserves .env and data/; only restarts PM2 app lk-nmiczd.
 
-  set SSH_PASS=...  (PowerShell: $env:SSH_PASS='...')
   python scripts/ssh_deploy_lk.py
+
+Либо: $env:SSH_PASS='...' перед запуском (перекрывает deploy/.env).
 """
 import os
 import sys
+from pathlib import Path
+
+_scripts = Path(__file__).resolve().parent
+if str(_scripts) not in sys.path:
+    sys.path.insert(0, str(_scripts))
 
 import paramiko
+
+from deploy_env import load_deploy_env
 
 # Override: LK_SSH_HOST, LK_APP_DIR
 HOST = os.environ.get("LK_SSH_HOST", "5.129.249.151")
@@ -34,6 +42,7 @@ def main() -> None:
     if sys.platform == "win32":
         sys.stdout.reconfigure(encoding="utf-8", errors="replace")
         sys.stderr.reconfigure(encoding="utf-8", errors="replace")
+    load_deploy_env()
     pw = os.environ.get("SSH_PASS")
     if not pw:
         print("Set env SSH_PASS", file=sys.stderr)

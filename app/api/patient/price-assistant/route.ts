@@ -5,6 +5,7 @@ import {
   getAnthropicApiKey,
   runPriceAssistantModel,
 } from "@/lib/anthropic-price-assistant";
+import { getShowPriceAssistantChat } from "@/lib/show-price-assistant-flag";
 import { getLkSession } from "@/lib/lk-session";
 import { prisma } from "@/lib/prisma";
 import { priceAssistantRateLimitOk } from "@/lib/rate-limit";
@@ -54,6 +55,13 @@ export async function POST(request: NextRequest) {
     return NextResponse.json(
       { error: "Слишком много запросов. Подождите минуту." },
       { status: 429 },
+    );
+  }
+
+  if (!(await getShowPriceAssistantChat())) {
+    return NextResponse.json(
+      { error: "Подбор по ИИ отключён в настройках." },
+      { status: 403 },
     );
   }
 

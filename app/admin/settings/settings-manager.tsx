@@ -43,6 +43,8 @@ export function SettingsManager() {
   const [anthropicKeyInput, setAnthropicKeyInput] = useState("");
   const [anthropicSaving, setAnthropicSaving] = useState(false);
   const [anthropicMsg, setAnthropicMsg] = useState<string | null>(null);
+  const [showPriceAssistantChat, setShowPriceAssistantChat] = useState(true);
+  const [showAssistantSaving, setShowAssistantSaving] = useState(false);
 
   const [importRunning, setImportRunning] = useState(false);
   const [importLog, setImportLog] = useState<string | null>(null);
@@ -79,9 +81,13 @@ export function SettingsManager() {
     if (!res.ok) return;
     const data = (await res.json()) as {
       anthropicKeySource?: AnthropicKeySource;
+      showPriceAssistantChat?: boolean;
     };
     if (data.anthropicKeySource) {
       setAnthropicSource(data.anthropicKeySource);
+    }
+    if (typeof data.showPriceAssistantChat === "boolean") {
+      setShowPriceAssistantChat(data.showPriceAssistantChat);
     }
   }, []);
 
@@ -154,6 +160,7 @@ export function SettingsManager() {
       const data = (await res.json()) as {
         error?: string;
         anthropicKeySource?: AnthropicKeySource;
+        showPriceAssistantChat?: boolean;
       };
       if (!res.ok) {
         setAnthropicMsg(data.error ?? "Не удалось сохранить");
@@ -163,9 +170,41 @@ export function SettingsManager() {
       if (data.anthropicKeySource) {
         setAnthropicSource(data.anthropicKeySource);
       }
+      if (typeof data.showPriceAssistantChat === "boolean") {
+        setShowPriceAssistantChat(data.showPriceAssistantChat);
+      }
       setAnthropicMsg("Сохранено.");
     } finally {
       setAnthropicSaving(false);
+    }
+  }
+
+  async function saveShowPriceAssistantChat(next: boolean) {
+    const prev = showPriceAssistantChat;
+    setShowPriceAssistantChat(next);
+    setShowAssistantSaving(true);
+    setAnthropicMsg(null);
+    try {
+      const res = await fetch("/api/admin/app-settings", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ showPriceAssistantChat: next }),
+      });
+      const data = (await res.json()) as {
+        error?: string;
+        showPriceAssistantChat?: boolean;
+      };
+      if (!res.ok) {
+        setShowPriceAssistantChat(prev);
+        setAnthropicMsg(data.error ?? "Не удалось сохранить");
+        return;
+      }
+      if (typeof data.showPriceAssistantChat === "boolean") {
+        setShowPriceAssistantChat(data.showPriceAssistantChat);
+      }
+      setAnthropicMsg("Сохранено.");
+    } finally {
+      setShowAssistantSaving(false);
     }
   }
 
@@ -356,6 +395,30 @@ export function SettingsManager() {
               <span className="font-mono text-xs">ANTHROPIC_API_KEY</span>, он
               имеет приоритет; иначе используется ключ из поля ниже.
             </p>
+
+            <div className="mt-6 rounded-lg border border-zinc-200 bg-white p-4 shadow-sm">
+              <label className="flex cursor-pointer items-start gap-3 text-sm">
+                <input
+                  type="checkbox"
+                  className="mt-0.5 h-4 w-4 shrink-0 rounded border-zinc-300"
+                  checked={showPriceAssistantChat}
+                  disabled={showAssistantSaving}
+                  onChange={(e) => {
+                    void saveShowPriceAssistantChat(e.target.checked);
+                  }}
+                />
+                <span>
+                  <span className="font-medium text-zinc-900">
+                    Отображать чат с AI
+                  </span>
+                  <span className="mt-1 block text-zinc-600">
+                    Если включено, под каталогом в ЛК пациента показывается блок
+                    «Подбор услуги». Если выключено — блок скрыт (ключ API при
+                    этом может оставаться сохранённым).
+                  </span>
+                </span>
+              </label>
+            </div>
 
             {anthropicSource === "env" && (
               <p className="mt-3 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-900">

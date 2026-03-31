@@ -1,9 +1,14 @@
 import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
+import { getShowPriceAssistantChat } from "@/lib/show-price-assistant-flag";
+
+export const dynamic = "force-dynamic";
 import { PricesCatalogView } from "./prices-catalog-view";
 import { PriceAssistantPanel } from "./price-assistant-panel";
 
-export default function LkPricesPage() {
+export default async function LkPricesPage() {
+  const showAssistant = await getShowPriceAssistantChat();
+
   return (
     <div className="mx-auto flex max-w-2xl flex-col gap-8 px-4 py-10">
       <header>
@@ -24,18 +29,20 @@ export default function LkPricesPage() {
 
       <PricesCatalogView />
 
-      <section className="border-t border-zinc-200 pt-8">
-        <h2 className="text-lg font-semibold text-zinc-900">
-          Подбор услуги
-        </h2>
-        <p className="mt-1 text-sm text-zinc-600">
-          Опишите, что вас беспокоит — подсказка составлена только из прайса и
-          не заменяет консультацию врача.
-        </p>
-        <div className="mt-4">
-          <PriceAssistantPanel />
-        </div>
-      </section>
+      {showAssistant && (
+        <section className="border-t border-zinc-200 pt-8">
+          <h2 className="text-lg font-semibold text-zinc-900">
+            Подбор услуги
+          </h2>
+          <p className="mt-1 text-sm text-zinc-600">
+            Опишите, что вас беспокоит — подсказка составлена только из прайса и
+            не заменяет консультацию врача.
+          </p>
+          <div className="mt-4">
+            <PriceAssistantPanel />
+          </div>
+        </section>
+      )}
     </div>
   );
 }
