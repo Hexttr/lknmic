@@ -95,7 +95,7 @@ export default async function LkPage() {
       <div className="flex justify-center">
         <Link
           href="/lk/appointment"
-          className="inline-flex w-full max-w-md items-center justify-center rounded-xl bg-[#ee0000] px-6 py-4 text-center text-base font-semibold text-white shadow-sm transition hover:bg-[#cc0000] sm:w-auto"
+          className="inline-flex w-full max-w-md items-center justify-center rounded-xl bg-emerald-800 px-6 py-4 text-center text-base font-semibold text-white shadow-sm transition hover:bg-emerald-900 sm:w-auto"
         >
           Запись на приём
         </Link>

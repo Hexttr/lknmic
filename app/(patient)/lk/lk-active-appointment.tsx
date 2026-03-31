@@ -69,7 +69,7 @@ function ActiveAppointmentCard({
 
   return (
     <div className="rounded-xl border border-emerald-100/90 bg-white px-4 py-4 shadow-sm">
-      <p className="mt-1 text-xs text-zinc-600 sm:text-sm">
+      <p className="mt-1 text-xs font-bold text-zinc-800 sm:text-sm">
         {exactAdmin
           ? "Дата и время согласованы с клиникой."
           : "Предварительные дата и время. После звонка администратора они могут измениться."}
@@ -100,7 +100,7 @@ function ActiveAppointmentCard({
           type="button"
           onClick={() => void cancel()}
           disabled={cancelling}
-          className="w-full max-w-md rounded-lg bg-[#ee0000] px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-[#cc0000] disabled:opacity-50"
+          className="max-w-[200px] rounded-lg bg-[#ee0000] px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-[#cc0000] disabled:opacity-50"
         >
           {cancelling ? "Отмена…" : "Отменить запись"}
         </button>
@@ -126,7 +126,7 @@ export function LkActiveAppointments({
 
   return (
     <section className="rounded-2xl border border-emerald-200 bg-emerald-50/95 p-5 shadow-sm">
-      <h2 className="text-lg font-semibold text-zinc-900">
+      <h2 className="text-center text-lg font-semibold uppercase tracking-wide text-zinc-900">
         {items.length === 1 ? "Ваша заявка на приём" : "Ваши заявки на приём"}
       </h2>
       <p className="mt-1 text-sm text-emerald-950/80">
