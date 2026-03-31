@@ -1,7 +1,8 @@
 "use client";
 
 import { useCallback, useEffect, useState, type FormEvent } from "react";
-import { useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
+import { Archive, ClipboardList } from "lucide-react";
 import { SpecialistIcon } from "@/lib/specialist-icons";
 import { formatDateRuFromIso } from "@/lib/date-format-ru";
 
@@ -24,8 +25,21 @@ const STATUS_LABEL: Record<AppointmentRow["status"], string> = {
 };
 
 export function RequestsManager() {
+  const router = useRouter();
   const searchParams = useSearchParams();
   const specialistFilter = searchParams.get("specialistId")?.trim() ?? "";
+  const archiveView = searchParams.get("archive") === "1";
+
+  function setArchiveView(on: boolean) {
+    const p = new URLSearchParams(searchParams.toString());
+    if (on) {
+      p.set("archive", "1");
+    } else {
+      p.delete("archive");
+    }
+    const q = p.toString();
+    router.replace(q ? `/admin/requests?${q}` : "/admin/requests");
+  }
 
   const [rows, setRows] = useState<AppointmentRow[]>([]);
   const [loading, setLoading] = useState(true);
@@ -39,17 +53,25 @@ export function RequestsManager() {
 
   const load = useCallback(async () => {
     setError(null);
-    const q = specialistFilter
-      ? `?specialistId=${encodeURIComponent(specialistFilter)}`
-      : "";
-    const res = await fetch(`/api/admin/appointments${q}`, { cache: "no-store" });
+    const params = new URLSearchParams();
+    if (specialistFilter) {
+      params.set("specialistId", specialistFilter);
+    }
+    if (archiveView) {
+      params.set("archived", "1");
+    }
+    const q = params.toString();
+    const res = await fetch(
+      `/api/admin/appointments${q ? `?${q}` : ""}`,
+      { cache: "no-store" },
+    );
     if (!res.ok) {
       setError("Не удалось загрузить заявки");
       return;
     }
     const data = (await res.json()) as { appointments: AppointmentRow[] };
     setRows(data.appointments);
-  }, [specialistFilter]);
+  }, [specialistFilter, archiveView]);
 
   useEffect(() => {
     let cancelled = false;
@@ -104,19 +126,50 @@ export function RequestsManager() {
 
   return (
     <div>
-      <h1 className="text-2xl font-semibold text-[#1a1a1a]">Заявки</h1>
-      <p className="mt-2 text-sm text-zinc-600">
-        Заявки на приём из личных кабинетов пациентов. Укажите согласованные дату
-        и время после звонка клиенту.
-      </p>
-      {specialistFilter && (
-        <p className="mt-2 text-sm text-[#0c2847]">
-          Фильтр по специалисту активен.{" "}
-          <a href="/admin/requests" className="underline">
-            Показать все
-          </a>
-        </p>
-      )}
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+        <div>
+          <div className="flex items-center gap-3">
+            <ClipboardList
+              className="h-8 w-8 shrink-0 text-[#0c2847]"
+              aria-hidden
+            />
+            <h1 className="text-2xl font-semibold text-[#1a1a1a]">
+              {archiveView ? "Архив заявок" : "Заявки"}
+            </h1>
+          </div>
+          <p className="mt-2 text-sm text-zinc-600">
+            {archiveView
+              ? "Заявки со статусом «Архив». Активные заявки — в разделе «Заявки»."
+              : "Заявки на приём из личных кабинетов пациентов. Укажите согласованные дату и время после звонка клиенту."}
+          </p>
+          {specialistFilter && (
+            <p className="mt-2 text-sm text-[#0c2847]">
+              Фильтр по специалисту активен.{" "}
+              <a
+                href={
+                  archiveView ? "/admin/requests?archive=1" : "/admin/requests"
+                }
+                className="underline"
+              >
+                Показать все
+              </a>
+            </p>
+          )}
+        </div>
+        <button
+          type="button"
+          onClick={() => setArchiveView(!archiveView)}
+          aria-pressed={archiveView}
+          className={`inline-flex shrink-0 items-center gap-2 rounded-lg border px-3 py-2 text-sm font-medium shadow-sm transition ${
+            archiveView
+              ? "border-[#0c2847] bg-[#0c2847] text-white"
+              : "border-zinc-300 bg-white text-zinc-900 hover:bg-zinc-50"
+          }`}
+        >
+          <Archive className="h-4 w-4" aria-hidden />
+          Архив
+        </button>
+      </div>
 
       {error && (
         <p className="mt-4 text-sm text-red-600" role="alert">
@@ -127,11 +180,13 @@ export function RequestsManager() {
       {loading ? (
         <p className="mt-8 text-zinc-500">Загрузка…</p>
       ) : rows.length === 0 ? (
-        <p className="mt-8 text-zinc-500">Заявок пока нет.</p>
+        <p className="mt-8 text-zinc-600">
+          {archiveView ? "В архиве пока нет записей." : "Заявок пока нет."}
+        </p>
       ) : (
         <div className="mt-8 overflow-x-auto rounded-xl border border-zinc-200 bg-white shadow-sm">
-          <table className="min-w-[900px] w-full text-left text-sm">
-            <thead className="border-b border-zinc-200 bg-zinc-50 text-xs font-semibold uppercase text-zinc-600">
+          <table className="min-w-[900px] w-full text-left text-sm text-zinc-900">
+            <thead className="border-b border-zinc-200 bg-zinc-50 text-xs font-semibold uppercase text-zinc-700">
               <tr>
                 <th className="px-4 py-3">Телефон</th>
                 <th className="px-4 py-3">Специалист</th>
@@ -149,25 +204,27 @@ export function RequestsManager() {
                   <td className="px-4 py-3 font-mono text-zinc-900">
                     {r.user.phone}
                   </td>
-                  <td className="px-4 py-3">
+                  <td className="px-4 py-3 text-zinc-900">
                     <span className="inline-flex items-center gap-2">
                       <SpecialistIcon
                         iconKey={r.specialistType.iconKey}
-                        className="h-4 w-4 text-[#0c2847]"
+                        className="h-4 w-4 shrink-0 text-[#0c2847]"
                       />
                       {r.specialistType.name}
                     </span>
                   </td>
-                  <td className="px-4 py-3 whitespace-nowrap">
+                  <td className="px-4 py-3 whitespace-nowrap text-zinc-900">
                     {formatDateRuFromIso(r.date)}
                   </td>
-                  <td className="px-4 py-3 font-mono text-xs">{r.timeSlot}</td>
-                  <td className="px-4 py-3 text-zinc-700">
+                  <td className="px-4 py-3 font-mono text-xs text-zinc-900">
+                    {r.timeSlot}
+                  </td>
+                  <td className="px-4 py-3 text-zinc-900">
                     {r.adminDate
                       ? formatDateRuFromIso(r.adminDate)
                       : "—"}
                   </td>
-                  <td className="px-4 py-3 font-mono text-xs">
+                  <td className="px-4 py-3 font-mono text-xs text-zinc-900">
                     {r.adminTime ?? "—"}
                   </td>
                   <td className="px-4 py-3">
@@ -187,9 +244,9 @@ export function RequestsManager() {
                     <button
                       type="button"
                       onClick={() => openEdit(r)}
-                      className="text-[#0c2847] hover:underline"
+                      className="rounded-md border border-zinc-300 bg-white px-3 py-1.5 text-sm font-medium text-zinc-900 shadow-sm hover:bg-zinc-50"
                     >
-                      Изменить
+                      Обработать
                     </button>
                   </td>
                 </tr>

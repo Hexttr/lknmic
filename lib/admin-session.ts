@@ -3,6 +3,7 @@ import { cookies } from "next/headers";
 import { Role } from "@prisma/client";
 import type { SessionData } from "@/lib/session";
 import { getSessionOptions } from "@/lib/session";
+import { resolveSessionRole } from "@/lib/session-role";
 
 export type AdminSessionOptions = {
   /**
@@ -25,7 +26,12 @@ export async function getAdminSession(
   if (!session.isLoggedIn || !session.userId) {
     return { ok: false, status: 401 };
   }
-  if (session.role !== Role.ADMIN) {
+
+  const role = await resolveSessionRole(session);
+  if (role === null) {
+    return { ok: false, status: 401 };
+  }
+  if (role !== Role.ADMIN) {
     return { ok: false, status: 403 };
   }
   if (panelOnly && session.patientMode) {

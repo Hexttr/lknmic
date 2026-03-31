@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState, type FormEvent } from "react";
+import { Settings } from "lucide-react";
 
 type AdminRow = {
   id: string;
@@ -85,7 +86,10 @@ export function SettingsManager() {
 
   return (
     <div>
-      <h1 className="text-2xl font-semibold text-[#1a1a1a]">Настройки</h1>
+      <div className="flex items-center gap-3">
+        <Settings className="h-8 w-8 shrink-0 text-[#0c2847]" aria-hidden />
+        <h1 className="text-2xl font-semibold text-[#1a1a1a]">Настройки</h1>
+      </div>
       <p className="mt-2 max-w-2xl text-sm leading-relaxed text-zinc-600">
         Администраторы видят раздел «Пациенты» и настройки клиники. Номер
         должен совпадать с тем, по которому человек входит в систему (звонок

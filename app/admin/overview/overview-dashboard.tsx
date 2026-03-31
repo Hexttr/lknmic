@@ -3,7 +3,12 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
-import { ClipboardList, Stethoscope, Users } from "lucide-react";
+import {
+  ClipboardList,
+  LayoutDashboard,
+  Stethoscope,
+  Users,
+} from "lucide-react";
 import { SpecialistIcon } from "@/lib/specialist-icons";
 
 type Card = {
@@ -55,7 +60,13 @@ export function OverviewDashboard() {
 
   return (
     <div>
-      <h1 className="text-2xl font-semibold text-[#1a1a1a]">Обзор</h1>
+      <div className="flex items-center gap-3">
+        <LayoutDashboard
+          className="h-8 w-8 shrink-0 text-[#0c2847]"
+          aria-hidden
+        />
+        <h1 className="text-2xl font-semibold text-[#1a1a1a]">Обзор</h1>
+      </div>
       <p className="mt-1 text-sm text-zinc-600">
         Краткая статистика и заявки по специалистам.
       </p>

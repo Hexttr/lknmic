@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { Role } from "@prisma/client";
+import { AppointmentStatus, Role } from "@prisma/client";
 import { getAdminSession } from "@/lib/admin-session";
 import { prisma } from "@/lib/prisma";
 
@@ -9,6 +9,7 @@ export async function GET() {
     return NextResponse.json({ error: "forbidden" }, { status: admin.status });
   }
 
+  try {
   const patientCount = await prisma.user.count({
     where: { role: Role.PATIENT },
   });
@@ -16,7 +17,7 @@ export async function GET() {
   const specialistTypeCount = await prisma.specialistType.count();
 
   const activeRequestsCount = await prisma.appointmentRequest.count({
-    where: { NOT: { status: "ARCHIVED" } },
+    where: { status: { not: AppointmentStatus.ARCHIVED } },
   });
 
   const types = await prisma.specialistType.findMany({
@@ -32,7 +33,7 @@ export async function GET() {
       const nonArchived = await prisma.appointmentRequest.count({
         where: {
           specialistTypeId: t.id,
-          NOT: { status: "ARCHIVED" },
+          status: { not: AppointmentStatus.ARCHIVED },
         },
       });
       const hasUnprocessed = nonArchived > 0;
@@ -52,4 +53,8 @@ export async function GET() {
     activeRequestsCount,
     specialistCards,
   });
+  } catch (e) {
+    console.error("overview", e);
+    return NextResponse.json({ error: "server_error" }, { status: 500 });
+  }
 }

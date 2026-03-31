@@ -1,5 +1,6 @@
 "use client";
 
+import { LogIn } from "lucide-react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
@@ -157,9 +158,12 @@ export function LoginForm() {
             className="h-auto w-auto max-w-[200px] object-contain"
             priority
           />
-          <h1 className="text-center text-xl font-semibold text-zinc-900">
-            Личный кабинет пациента
-          </h1>
+          <div className="flex items-center justify-center gap-2">
+            <LogIn className="h-7 w-7 shrink-0 text-[#0c2847]" aria-hidden />
+            <h1 className="text-center text-xl font-semibold text-zinc-900">
+              Личный кабинет пациента
+            </h1>
+          </div>
           <p className="text-center text-sm text-zinc-600">
             Вход по номеру телефона
           </p>

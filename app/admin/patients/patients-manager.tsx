@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import type { ComponentProps, FormEvent } from "react";
+import { Users } from "lucide-react";
 import { MAX_UPLOAD_MB } from "@/lib/upload-limits";
 
 type Doc = {
@@ -226,7 +227,10 @@ export function PatientsManager() {
 
   return (
     <div>
-      <h1 className="text-2xl font-semibold text-[#1a1a1a]">Пациенты</h1>
+      <div className="flex items-center gap-3">
+        <Users className="h-8 w-8 shrink-0 text-[#0c2847]" aria-hidden />
+        <h1 className="text-2xl font-semibold text-[#1a1a1a]">Пациенты</h1>
+      </div>
       <p className="mt-1 text-sm text-zinc-600">
         Учётные записи по номеру телефона. В списке также отображаются
         администраторы (пометка «Админ») — к ним можно прикреплять файлы для

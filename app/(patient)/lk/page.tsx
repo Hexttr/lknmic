@@ -1,4 +1,5 @@
 import { Role } from "@prisma/client";
+import { Home } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { prisma } from "@/lib/prisma";
@@ -53,9 +54,12 @@ export default async function LkPage() {
       <header className="flex flex-wrap items-start justify-between gap-4 border-b border-zinc-200 pb-8">
         <div className="min-w-0 flex-1">
           <p className="text-sm font-medium text-zinc-500">Личный кабинет</p>
-          <h1 className="mt-2 text-2xl font-semibold tracking-tight text-zinc-900">
-            Добро пожаловать
-          </h1>
+          <div className="mt-2 flex items-center gap-3">
+            <Home className="h-8 w-8 shrink-0 text-[#0c2847]" aria-hidden />
+            <h1 className="text-2xl font-semibold tracking-tight text-zinc-900">
+              Добро пожаловать
+            </h1>
+          </div>
           <p className="mt-3 font-mono text-sm text-zinc-600">{user.phone}</p>
         </div>
         <LogoutButton />

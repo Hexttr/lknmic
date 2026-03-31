@@ -1,5 +1,6 @@
 "use client";
 
+import { CalendarClock } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState, type FormEvent } from "react";
@@ -115,7 +116,10 @@ export function AppointmentForm() {
       onSubmit={onSubmit}
       className="rounded-2xl border border-zinc-200 bg-white p-6 shadow-sm"
     >
-      <h1 className="text-xl font-semibold text-zinc-900">Запись на приём</h1>
+      <div className="flex items-center gap-3">
+        <CalendarClock className="h-7 w-7 shrink-0 text-[#0c2847]" aria-hidden />
+        <h1 className="text-xl font-semibold text-zinc-900">Запись на приём</h1>
+      </div>
       <p className="mt-2 text-sm text-zinc-600">
         Укажите желаемую дату, удобный часовой интервал и специалиста. Мы
         обработаем заявку и перезвоним для уточнения.
