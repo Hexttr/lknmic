@@ -17,7 +17,11 @@ export async function GET() {
   const specialistTypeCount = await prisma.specialistType.count();
 
   const activeRequestsCount = await prisma.appointmentRequest.count({
-    where: { status: { not: AppointmentStatus.ARCHIVED } },
+    where: {
+      status: {
+        notIn: [AppointmentStatus.ARCHIVED, AppointmentStatus.CANCELLED],
+      },
+    },
   });
 
   const types = await prisma.specialistType.findMany({
@@ -30,13 +34,15 @@ export async function GET() {
       const total = await prisma.appointmentRequest.count({
         where: { specialistTypeId: t.id },
       });
-      const nonArchived = await prisma.appointmentRequest.count({
+      const pending = await prisma.appointmentRequest.count({
         where: {
           specialistTypeId: t.id,
-          status: { not: AppointmentStatus.ARCHIVED },
+          status: {
+            in: [AppointmentStatus.NEW, AppointmentStatus.AWAITING_PATIENT],
+          },
         },
       });
-      const hasUnprocessed = nonArchived > 0;
+      const hasUnprocessed = pending > 0;
       return {
         id: t.id,
         name: t.name,

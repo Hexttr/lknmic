@@ -30,16 +30,27 @@ export function AppointmentForm() {
   );
   const [submitting, setSubmitting] = useState(false);
   const [done, setDone] = useState(false);
+  const [blockedByActive, setBlockedByActive] = useState(false);
 
   const load = useCallback(async () => {
     setError(null);
-    const res = await fetch("/api/specialist-types", { cache: "no-store" });
-    if (!res.ok) {
+    const [specRes, activeRes] = await Promise.all([
+      fetch("/api/specialist-types", { cache: "no-store" }),
+      fetch("/api/patient/appointments", { cache: "no-store" }),
+    ]);
+    if (!specRes.ok) {
       setError("Не удалось загрузить список специалистов");
+      setBlockedByActive(false);
       return;
     }
-    const data = (await res.json()) as { specialistTypes: Spec[] };
+    const data = (await specRes.json()) as { specialistTypes: Spec[] };
     setTypes(data.specialistTypes);
+    if (activeRes.ok) {
+      const apt = (await activeRes.json()) as { active?: unknown };
+      setBlockedByActive(Boolean(apt.active));
+    } else {
+      setBlockedByActive(false);
+    }
   }, []);
 
   useEffect(() => {
@@ -133,6 +144,21 @@ export function AppointmentForm() {
 
       {loading ? (
         <p className="mt-8 text-zinc-500">Загрузка…</p>
+      ) : blockedByActive ? (
+        <div className="mt-8 rounded-xl border border-sky-200 bg-sky-50/90 px-4 py-5 text-sm text-zinc-800">
+          <p className="font-medium text-zinc-900">
+            У вас уже есть активная заявка на приём.
+          </p>
+          <p className="mt-2 text-zinc-600">
+            Откройте личный кабинет, чтобы посмотреть детали или отменить запись.
+          </p>
+          <Link
+            href="/lk"
+            className="mt-4 inline-flex rounded-lg bg-[#0c2847] px-4 py-2 text-sm font-medium text-white hover:bg-[#0a2238]"
+          >
+            Перейти в личный кабинет
+          </Link>
+        </div>
       ) : types.length === 0 ? (
         <p className="mt-8 text-sm text-amber-800">
           Список специалистов пока пуст. Обратитесь в регистратуру.

@@ -1,9 +1,33 @@
 import { NextRequest, NextResponse } from "next/server";
+import { AppointmentStatus } from "@prisma/client";
 import { isValidHourlySlot } from "@/lib/appointment-slots";
 import { getLkSession } from "@/lib/lk-session";
 import { prisma } from "@/lib/prisma";
 
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
+
+/** Активная заявка пациента (для ЛК и формы записи). */
+export async function GET() {
+  const lk = await getLkSession();
+  if (!lk.ok) {
+    return NextResponse.json({ error: "forbidden" }, { status: lk.status });
+  }
+
+  const active = await prisma.appointmentRequest.findFirst({
+    where: {
+      userId: lk.userId,
+      status: {
+        in: [AppointmentStatus.NEW, AppointmentStatus.AWAITING_PATIENT],
+      },
+    },
+    orderBy: { createdAt: "desc" },
+    include: {
+      specialistType: { select: { name: true, iconKey: true } },
+    },
+  });
+
+  return NextResponse.json({ active });
+}
 
 export async function POST(request: NextRequest) {
   const lk = await getLkSession();
@@ -43,6 +67,24 @@ export async function POST(request: NextRequest) {
   });
   if (!spec) {
     return NextResponse.json({ error: "Специалист не найден" }, { status: 400 });
+  }
+
+  const existingActive = await prisma.appointmentRequest.findFirst({
+    where: {
+      userId: lk.userId,
+      status: {
+        in: [AppointmentStatus.NEW, AppointmentStatus.AWAITING_PATIENT],
+      },
+    },
+  });
+  if (existingActive) {
+    return NextResponse.json(
+      {
+        error:
+          "У вас уже есть активная заявка. Отмените её в личном кабинете или дождитесь завершения.",
+      },
+      { status: 400 },
+    );
   }
 
   const created = await prisma.appointmentRequest.create({

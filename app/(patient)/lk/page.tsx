@@ -1,4 +1,4 @@
-import { Role } from "@prisma/client";
+import { AppointmentStatus, Role } from "@prisma/client";
 import { Home } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
@@ -8,6 +8,7 @@ import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import type { SessionData } from "@/lib/session";
 import { getSessionOptions } from "@/lib/session";
+import { LkActiveAppointment } from "./lk-active-appointment";
 import { LogoutButton } from "./logout-button";
 import { ReturnToAdminBanner } from "./return-to-admin-banner";
 
@@ -33,6 +34,19 @@ export default async function LkPage() {
     },
   });
   if (!user) redirect("/login");
+
+  const activeAppointment = await prisma.appointmentRequest.findFirst({
+    where: {
+      userId: user.id,
+      status: {
+        in: [AppointmentStatus.NEW, AppointmentStatus.AWAITING_PATIENT],
+      },
+    },
+    orderBy: { createdAt: "desc" },
+    include: {
+      specialistType: { select: { name: true, iconKey: true } },
+    },
+  });
 
   const showAdminBanner =
     session.role === Role.ADMIN && session.patientMode === true;
@@ -65,13 +79,32 @@ export default async function LkPage() {
         <LogoutButton />
       </header>
 
+      {activeAppointment && (
+        <LkActiveAppointment
+          initial={{
+            id: activeAppointment.id,
+            date: activeAppointment.date,
+            timeSlot: activeAppointment.timeSlot,
+            adminDate: activeAppointment.adminDate,
+            adminTime: activeAppointment.adminTime,
+            specialistType: activeAppointment.specialistType,
+          }}
+        />
+      )}
+
       <div className="flex justify-center">
-        <Link
-          href="/lk/appointment"
-          className="inline-flex w-full max-w-md items-center justify-center rounded-xl bg-[#ee0000] px-6 py-4 text-center text-base font-semibold text-white shadow-sm transition hover:bg-[#cc0000] sm:w-auto"
-        >
-          Запись на приём
-        </Link>
+        {activeAppointment ? (
+          <span className="inline-flex w-full max-w-md items-center justify-center rounded-xl border border-zinc-200 bg-zinc-100 px-6 py-4 text-center text-base font-semibold text-zinc-500 sm:w-auto">
+            Сначала завершите или отмените текущую заявку
+          </span>
+        ) : (
+          <Link
+            href="/lk/appointment"
+            className="inline-flex w-full max-w-md items-center justify-center rounded-xl bg-[#ee0000] px-6 py-4 text-center text-base font-semibold text-white shadow-sm transition hover:bg-[#cc0000] sm:w-auto"
+          >
+            Запись на приём
+          </Link>
+        )}
       </div>
 
       <section>

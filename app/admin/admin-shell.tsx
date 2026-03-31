@@ -7,11 +7,11 @@ import type { ComponentProps } from "react";
 import { useCallback, useEffect, useState } from "react";
 
 const nav = [
-  { href: "/admin/overview", label: "Обзор" },
-  { href: "/admin/requests", label: "Заявки" },
-  { href: "/admin/patients", label: "Пациенты" },
-  { href: "/admin/specialists", label: "Специалисты" },
-  { href: "/admin/settings", label: "Настройки" },
+  { href: "/admin/overview", label: "Обзор", badge: false as const },
+  { href: "/admin/requests", label: "Заявки", badge: true as const },
+  { href: "/admin/patients", label: "Пациенты", badge: false as const },
+  { href: "/admin/specialists", label: "Специалисты", badge: false as const },
+  { href: "/admin/settings", label: "Настройки", badge: false as const },
 ];
 
 function IconMenu(props: ComponentProps<"svg">) {
@@ -54,8 +54,39 @@ function IconClose(props: ComponentProps<"svg">) {
 export function AdminShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const [menuOpen, setMenuOpen] = useState(false);
+  const [pendingRequests, setPendingRequests] = useState<number | null>(null);
 
   const closeMenu = useCallback(() => setMenuOpen(false), []);
+
+  const loadPending = useCallback(async () => {
+    try {
+      const res = await fetch("/api/admin/pending-requests-count", {
+        cache: "no-store",
+      });
+      if (!res.ok) return;
+      const data = (await res.json()) as { count?: number };
+      if (typeof data.count === "number") setPendingRequests(data.count);
+    } catch {
+      /* ignore */
+    }
+  }, []);
+
+  useEffect(() => {
+    void loadPending();
+  }, [loadPending, pathname]);
+
+  useEffect(() => {
+    const onFocus = () => void loadPending();
+    window.addEventListener("focus", onFocus);
+    return () => window.removeEventListener("focus", onFocus);
+  }, [loadPending]);
+
+  useEffect(() => {
+    const onRefresh = () => void loadPending();
+    window.addEventListener("nczd-admin-pending-refresh", onRefresh);
+    return () =>
+      window.removeEventListener("nczd-admin-pending-refresh", onRefresh);
+  }, [loadPending]);
 
   useEffect(() => {
     closeMenu();
@@ -135,9 +166,6 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
             <IconClose className="h-6 w-6" />
           </button>
         </div>
-        <p className="hidden px-4 pb-1 text-[10px] font-medium uppercase tracking-wider text-white/50 md:block">
-          Администрирование
-        </p>
         <p className="px-4 pb-1 text-[10px] font-medium uppercase tracking-wider text-white/50 md:hidden">
           Меню
         </p>
@@ -152,13 +180,21 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
                 key={item.href}
                 href={item.href}
                 onClick={closeMenu}
-                className={`rounded-md px-3 py-2 text-[13px] font-medium leading-snug transition md:py-1.5 ${
+                className={`flex items-center justify-between gap-2 rounded-md px-3 py-2 text-[13px] font-medium leading-snug transition md:py-1.5 ${
                   active
                     ? "bg-[#ee0000] text-white shadow-inner"
                     : "text-white/85 hover:bg-white/10"
                 }`}
               >
-                {item.label}
+                <span>{item.label}</span>
+                {item.badge && pendingRequests !== null && pendingRequests > 0 ? (
+                  <span
+                    className="flex min-w-[1.375rem] shrink-0 items-center justify-center rounded-full bg-white px-1.5 py-0.5 text-[11px] font-semibold tabular-nums text-[#0c2847]"
+                    aria-label={`Необработанных заявок: ${pendingRequests}`}
+                  >
+                    {pendingRequests > 99 ? "99+" : pendingRequests}
+                  </span>
+                ) : null}
               </Link>
             );
           })}

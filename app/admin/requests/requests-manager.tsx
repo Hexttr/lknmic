@@ -10,7 +10,7 @@ type AppointmentRow = {
   id: string;
   date: string;
   timeSlot: string;
-  status: "NEW" | "AWAITING_PATIENT" | "ARCHIVED";
+  status: "NEW" | "AWAITING_PATIENT" | "CANCELLED" | "ARCHIVED";
   adminDate: string | null;
   adminTime: string | null;
   createdAt: string;
@@ -21,6 +21,7 @@ type AppointmentRow = {
 const STATUS_LABEL: Record<AppointmentRow["status"], string> = {
   NEW: "Новая",
   AWAITING_PATIENT: "Ожидаем пациента",
+  CANCELLED: "Отменена",
   ARCHIVED: "Архив",
 };
 
@@ -119,6 +120,7 @@ export function RequestsManager() {
       }
       closeEdit();
       await load();
+      window.dispatchEvent(new Event("nczd-admin-pending-refresh"));
     } finally {
       setSaving(false);
     }
@@ -163,7 +165,7 @@ export function RequestsManager() {
           className={`inline-flex shrink-0 items-center gap-2 rounded-lg border px-3 py-2 text-sm font-medium shadow-sm transition ${
             archiveView
               ? "border-[#0c2847] bg-[#0c2847] text-white"
-              : "border-zinc-300 bg-white text-zinc-900 hover:bg-zinc-50"
+              : "border-transparent bg-[#ee0000] text-white hover:bg-[#cc0000]"
           }`}
         >
           <Archive className="h-4 w-4" aria-hidden />
@@ -194,7 +196,7 @@ export function RequestsManager() {
                 <th className="px-4 py-3">Предпочт. время</th>
                 <th className="px-4 py-3">Согласовано (дата)</th>
                 <th className="px-4 py-3">Согласовано (время)</th>
-                <th className="px-4 py-3">Статус</th>
+                <th className="px-4 py-3 text-center">Статус</th>
                 <th className="px-4 py-3" />
               </tr>
             </thead>
@@ -227,14 +229,16 @@ export function RequestsManager() {
                   <td className="px-4 py-3 font-mono text-xs text-zinc-900">
                     {r.adminTime ?? "—"}
                   </td>
-                  <td className="px-4 py-3">
+                  <td className="px-4 py-3 text-center">
                     <span
-                      className={`rounded-md px-2 py-1 text-xs font-medium ${
+                      className={`inline-block rounded-md px-2 py-1 text-xs font-medium ${
                         r.status === "ARCHIVED"
                           ? "bg-zinc-200 text-zinc-800"
-                          : r.status === "NEW"
-                            ? "bg-amber-100 text-amber-950"
-                            : "bg-sky-100 text-sky-950"
+                          : r.status === "CANCELLED"
+                            ? "bg-rose-100 text-rose-950"
+                            : r.status === "NEW"
+                              ? "bg-amber-100 text-amber-950"
+                              : "bg-sky-100 text-sky-950"
                       }`}
                     >
                       {STATUS_LABEL[r.status]}
@@ -244,7 +248,7 @@ export function RequestsManager() {
                     <button
                       type="button"
                       onClick={() => openEdit(r)}
-                      className="rounded-md border border-zinc-300 bg-white px-3 py-1.5 text-sm font-medium text-zinc-900 shadow-sm hover:bg-zinc-50"
+                      className="rounded-md bg-emerald-600 px-3 py-1.5 text-sm font-medium text-white shadow-sm hover:bg-emerald-700"
                     >
                       Обработать
                     </button>
@@ -285,6 +289,7 @@ export function RequestsManager() {
                 >
                   <option value="NEW">Новая</option>
                   <option value="AWAITING_PATIENT">Ожидаем пациента</option>
+                  <option value="CANCELLED">Отменена</option>
                   <option value="ARCHIVED">Архив</option>
                 </select>
               </label>

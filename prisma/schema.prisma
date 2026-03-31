@@ -17,6 +17,7 @@ enum Role {
 enum AppointmentStatus {
   NEW
   AWAITING_PATIENT
+  CANCELLED
   ARCHIVED
 }
 

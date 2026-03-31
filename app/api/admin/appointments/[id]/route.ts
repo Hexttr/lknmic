@@ -38,6 +38,7 @@ export async function PATCH(request: NextRequest, { params }: Params) {
     if (
       s !== "NEW" &&
       s !== "AWAITING_PATIENT" &&
+      s !== "CANCELLED" &&
       s !== "ARCHIVED"
     ) {
       return NextResponse.json({ error: "Некорректный статус" }, { status: 400 });

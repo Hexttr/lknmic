@@ -113,7 +113,7 @@ export function OverviewDashboard() {
             <p className="text-2xl font-semibold tabular-nums text-zinc-900">
               {data.activeRequestsCount}
             </p>
-            <p className="text-xs text-zinc-500">не в архиве</p>
+            <p className="text-xs text-zinc-500">без архива и отмен</p>
           </div>
         </div>
       </div>
