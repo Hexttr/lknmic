@@ -1,6 +1,6 @@
 /**
  * Импорт дерева прайса с https://nczd.ru/price/
- * Запуск: npx tsx scripts/import-nczd-prices.ts [--dry-run] [--clear]
+ * Запуск: npx tsx scripts/import-nczd-prices.ts [--dry-run] [--clear] [--max-sections=N]
  * Требуется DATABASE_URL / .env как у приложения.
  */
 
@@ -24,6 +24,13 @@ type NavNode = {
 const args = process.argv.slice(2);
 const DRY = args.includes("--dry-run");
 const CLEAR = args.includes("--clear");
+
+const maxSectionsArg = args.find((a) => a.startsWith("--max-sections="));
+const MAX_SECTIONS = (() => {
+  if (!maxSectionsArg) return undefined;
+  const n = parseInt(maxSectionsArg.slice("--max-sections=".length), 10);
+  return Number.isFinite(n) && n > 0 ? n : undefined;
+})();
 
 const emptyUrls: string[] = [];
 const fetchErrors: { url: string; message: string }[] = [];
@@ -249,8 +256,15 @@ async function main(): Promise<void> {
   }
 
   const indexHtml = await fetchHtml(INDEX_URL);
-  const tree = parseNavTree(indexHtml);
-  console.log(`Корневых разделов в меню: ${tree.length}`);
+  let tree = parseNavTree(indexHtml);
+  const fullCount = tree.length;
+  if (MAX_SECTIONS != null && MAX_SECTIONS < tree.length) {
+    tree = tree.slice(0, MAX_SECTIONS);
+    console.log(
+      `Ограничение --max-sections=${MAX_SECTIONS}: обработано ${tree.length} из ${fullCount} корневых разделов`,
+    );
+  }
+  console.log(`Корневых разделов в меню (к обработке): ${tree.length}`);
 
   if (DRY) {
     const stats = await dryRunWalk(tree);
