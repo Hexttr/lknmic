@@ -265,78 +265,96 @@ export function RequestsManager() {
           {archiveView ? "В архиве пока нет записей." : "Заявок пока нет."}
         </p>
       ) : (
-        <div className="mt-8 overflow-x-auto rounded-xl border border-zinc-200 bg-white shadow-sm">
-          <table className="min-w-[1000px] w-full text-left text-sm text-zinc-900">
-            <thead className="border-b border-zinc-200 bg-zinc-50 text-xs font-semibold uppercase text-zinc-700">
-              <tr>
-                <th className="px-4 py-3">Телефон</th>
-                <th className="px-4 py-3">Поступила</th>
-                <th className="px-4 py-3">Специалист</th>
-                <th className="px-4 py-3">Предпочт. дата</th>
-                <th className="px-4 py-3">Предпочт. время</th>
-                <th className="px-4 py-3">Согласовано (дата)</th>
-                <th className="px-4 py-3">Согласовано (время)</th>
-                <th className="px-4 py-3 text-center">Статус</th>
-                <th className="px-4 py-3" />
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-zinc-100">
-              {rows.map((r) => (
-                <tr key={r.id} className="hover:bg-zinc-50/80">
-                  <td className="px-4 py-3 font-mono text-zinc-900">
-                    {r.user.phone}
-                  </td>
-                  <td className="whitespace-nowrap px-4 py-3 text-sm text-zinc-800">
-                    {formatReceivedAt(r.createdAt)}
-                  </td>
-                  <td className="px-4 py-3 text-zinc-900">
-                    <span className="inline-flex items-center gap-2">
-                      <SpecialistIcon
-                        iconKey={r.specialistType.iconKey}
-                        className="h-4 w-4 shrink-0 text-[#0c2847]"
-                      />
-                      {r.specialistType.name}
+        <div className="mt-8 rounded-xl border border-zinc-200 bg-white shadow-sm">
+          <table className="w-full max-w-full text-left text-xs text-zinc-900 sm:text-sm">
+              <thead className="border-b border-zinc-200 bg-zinc-50 text-[10px] font-semibold uppercase leading-tight text-zinc-700 sm:text-xs">
+                <tr>
+                  <th className="px-2 py-2 sm:px-3">Телефон</th>
+                  <th className="px-2 py-2 sm:px-3">Поступила</th>
+                  <th className="px-2 py-2 sm:px-3">Специалист</th>
+                  <th className="px-2 py-2 sm:px-3">
+                    <span className="block normal-case">Желаемое</span>
+                    <span className="font-normal normal-case text-zinc-500">
+                      дата / время
                     </span>
-                  </td>
-                  <td className="px-4 py-3 whitespace-nowrap text-zinc-900">
-                    {formatDateRuFromIso(r.date)}
-                  </td>
-                  <td className="px-4 py-3 font-mono text-xs text-zinc-900">
-                    {r.timeSlot}
-                  </td>
-                  <td className="px-4 py-3 text-zinc-900">
-                    {r.adminDate
-                      ? formatDateRuFromIso(r.adminDate)
-                      : "—"}
-                  </td>
-                  <td className="px-4 py-3 font-mono text-xs text-zinc-900">
-                    {r.adminTime ?? "—"}
-                  </td>
-                  <td className="px-4 py-3 text-center">
-                    <span
-                      className={`inline-block rounded-md px-2 py-1 text-xs font-medium ${
-                        r.status === "ARCHIVED"
-                          ? "bg-zinc-200 text-zinc-800"
-                          : r.status === "CANCELLED"
-                            ? "bg-rose-100 text-rose-950"
-                            : r.status === "NEW"
-                              ? "bg-amber-100 text-amber-950"
-                              : "bg-sky-100 text-sky-950"
-                      }`}
-                    >
-                      {STATUS_LABEL[r.status]}
+                  </th>
+                  <th className="px-2 py-2 sm:px-3">
+                    <span className="block normal-case">Согласовано</span>
+                    <span className="font-normal normal-case text-zinc-500">
+                      дата / время
                     </span>
-                  </td>
-                  <td className="px-4 py-3">
-                    <button
-                      type="button"
-                      onClick={() => openEdit(r)}
-                      className="rounded-md bg-emerald-600 px-3 py-1.5 text-sm font-medium text-white shadow-sm hover:bg-emerald-700"
-                    >
-                      Обработать
-                    </button>
-                  </td>
+                  </th>
+                  <th className="px-2 py-2 text-center sm:px-3">Статус</th>
+                  <th className="px-2 py-2 sm:px-3" />
                 </tr>
+              </thead>
+              <tbody className="divide-y divide-zinc-100">
+                {rows.map((r) => (
+                  <tr key={r.id} className="hover:bg-zinc-50/80">
+                    <td className="break-all px-2 py-2 font-mono text-[11px] sm:px-3 sm:text-sm">
+                      {r.user.phone}
+                    </td>
+                    <td className="px-2 py-2 text-[11px] text-zinc-800 sm:px-3 sm:text-sm">
+                      {formatReceivedAt(r.createdAt)}
+                    </td>
+                    <td className="min-w-0 px-2 py-2 sm:px-3">
+                      <span className="inline-flex max-w-full items-center gap-1.5">
+                        <SpecialistIcon
+                          iconKey={r.specialistType.iconKey}
+                          className="h-4 w-4 shrink-0 text-[#0c2847]"
+                        />
+                        <span className="min-w-0 break-words leading-snug">
+                          {r.specialistType.name}
+                        </span>
+                      </span>
+                    </td>
+                    <td className="min-w-0 px-2 py-2 sm:px-3">
+                      <div className="space-y-0.5 leading-tight">
+                        <div className="whitespace-nowrap">
+                          {formatDateRuFromIso(r.date)}
+                        </div>
+                        <div className="font-mono text-[11px] text-zinc-600 sm:text-xs">
+                          {r.timeSlot}
+                        </div>
+                      </div>
+                    </td>
+                    <td className="min-w-0 px-2 py-2 sm:px-3">
+                      <div className="space-y-0.5 leading-tight">
+                        <div>
+                          {r.adminDate
+                            ? formatDateRuFromIso(r.adminDate)
+                            : "—"}
+                        </div>
+                        <div className="font-mono text-[11px] text-zinc-600 sm:text-xs">
+                          {r.adminTime ?? "—"}
+                        </div>
+                      </div>
+                    </td>
+                    <td className="px-2 py-2 text-center sm:px-3">
+                      <span
+                        className={`inline-block max-w-full rounded-md px-1.5 py-0.5 text-[10px] font-medium sm:px-2 sm:text-xs ${
+                          r.status === "ARCHIVED"
+                            ? "bg-zinc-200 text-zinc-800"
+                            : r.status === "CANCELLED"
+                              ? "bg-rose-100 text-rose-950"
+                              : r.status === "NEW"
+                                ? "bg-amber-100 text-amber-950"
+                                : "bg-sky-100 text-sky-950"
+                        }`}
+                      >
+                        {STATUS_LABEL[r.status]}
+                      </span>
+                    </td>
+                    <td className="px-2 py-2 sm:px-3">
+                      <button
+                        type="button"
+                        onClick={() => openEdit(r)}
+                        className="whitespace-nowrap rounded-md bg-emerald-600 px-2 py-1 text-[11px] font-medium text-white shadow-sm hover:bg-emerald-700 sm:px-3 sm:py-1.5 sm:text-sm"
+                      >
+                        Обработать
+                      </button>
+                    </td>
+                  </tr>
               ))}
             </tbody>
           </table>
