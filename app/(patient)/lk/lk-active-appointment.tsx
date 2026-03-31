@@ -1,5 +1,6 @@
 "use client";
 
+import { XCircle } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { SpecialistIcon } from "@/lib/specialist-icons";
@@ -68,7 +69,7 @@ function ActiveAppointmentCard({
   }
 
   return (
-    <div className="rounded-xl border border-emerald-100/90 bg-white px-4 py-4 shadow-sm">
+    <div className="rounded-xl border-2 border-emerald-600 bg-white px-4 py-4 shadow-sm">
       <p className="mt-1 text-xs font-bold text-zinc-800 sm:text-sm">
         {exactAdmin
           ? "Дата и время согласованы с клиникой."
@@ -100,8 +101,9 @@ function ActiveAppointmentCard({
           type="button"
           onClick={() => void cancel()}
           disabled={cancelling}
-          className="max-w-[200px] rounded-lg bg-[#ee0000] px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-[#cc0000] disabled:opacity-50"
+          className="inline-flex max-w-[220px] items-center justify-center gap-2 rounded-lg bg-[#ee0000] px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-[#cc0000] disabled:opacity-50"
         >
+          <XCircle className="h-4 w-4 shrink-0" aria-hidden />
           {cancelling ? "Отмена…" : "Отменить запись"}
         </button>
       </div>
