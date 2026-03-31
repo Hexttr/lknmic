@@ -210,9 +210,6 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
           >
             Войти как пациент
           </button>
-          <p className="mb-2 hidden px-1 text-[10px] leading-tight text-white/45 md:block">
-            ЛК вместо панели до возврата.
-          </p>
           <button
             type="button"
             onClick={() => void logout()}
