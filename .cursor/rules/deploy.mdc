@@ -1,0 +1,7 @@
+---
+description: Деплой lk.nmiczd.ru на production VPS
+globs:
+alwaysApply: false
+---
+
+При задачах деплоя или обновления продакшена открой и следуй **`docs/DEPLOY.md`**: SSH через paramiko (`scripts/ssh_deploy_lk.py`, переменная `SSH_PASS`), каталог `/var/www/lk.nmiczd.ru`, PM2 только `lk-nmiczd`, `data/` и `.env` не затираются. Справочник специалистов: `npm run db:seed:specialists` на сервере после выкладки кода.

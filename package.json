@@ -9,7 +9,8 @@
     "start:prod": "next start -H 127.0.0.1 -p 3010",
     "lint": "eslint",
     "postinstall": "prisma generate",
-    "db:seed": "npx tsx prisma/seed.ts"
+    "db:seed": "npx tsx prisma/seed.ts",
+    "db:seed:specialists": "npx tsx prisma/seed-specialists.ts"
   },
   "prisma": {
     "seed": "npx tsx prisma/seed.ts"
