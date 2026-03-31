@@ -3,6 +3,8 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState, type FormEvent } from "react";
+import { APPOINTMENT_HOURLY_SLOTS } from "@/lib/appointment-slots";
+import { formatDateRuFromIso } from "@/lib/date-format-ru";
 import { SpecialistIcon } from "@/lib/specialist-icons";
 
 type Spec = { id: string; name: string; iconKey: string };
@@ -22,7 +24,9 @@ export function AppointmentForm() {
   const [error, setError] = useState<string | null>(null);
   const [specialistId, setSpecialistId] = useState("");
   const [date, setDate] = useState(todayISODate);
-  const [time, setTime] = useState("09:00");
+  const [timeSlot, setTimeSlot] = useState(
+    APPOINTMENT_HOURLY_SLOTS[1] ?? "09:00-10:00",
+  );
   const [submitting, setSubmitting] = useState(false);
   const [done, setDone] = useState(false);
 
@@ -72,7 +76,7 @@ export function AppointmentForm() {
         body: JSON.stringify({
           specialistTypeId: specialistId,
           date,
-          time,
+          timeSlot,
         }),
       });
       const data = (await res.json()) as { error?: string };
@@ -113,8 +117,8 @@ export function AppointmentForm() {
     >
       <h1 className="text-xl font-semibold text-zinc-900">Запись на приём</h1>
       <p className="mt-2 text-sm text-zinc-600">
-        Укажите желаемую дату, время и специалиста. Мы обработаем заявку и
-        перезвоним для уточнения.
+        Укажите желаемую дату, удобный часовой интервал и специалиста. Мы
+        обработаем заявку и перезвоним для уточнения.
       </p>
 
       {error && (
@@ -173,17 +177,32 @@ export function AppointmentForm() {
                 onChange={(e) => setDate(e.target.value)}
                 className="rounded-lg border border-zinc-300 px-3 py-2 text-zinc-900"
               />
+              <span className="text-xs text-zinc-600">
+                Формат:{" "}
+                <span className="font-medium text-zinc-800">
+                  {formatDateRuFromIso(date)}
+                </span>
+              </span>
             </label>
             <label className="flex flex-col gap-1 text-sm">
-              <span className="font-medium text-zinc-800">Время</span>
-              <input
-                type="time"
+              <span className="font-medium text-zinc-800">
+                Интервал (1 час)
+              </span>
+              <select
                 required
-                step={300}
-                value={time}
-                onChange={(e) => setTime(e.target.value)}
+                value={timeSlot}
+                onChange={(e) => setTimeSlot(e.target.value)}
                 className="rounded-lg border border-zinc-300 px-3 py-2 text-zinc-900"
-              />
+              >
+                {APPOINTMENT_HOURLY_SLOTS.map((slot) => (
+                  <option key={slot} value={slot}>
+                    {slot}
+                  </option>
+                ))}
+              </select>
+              <span className="text-xs text-zinc-500">
+                С 8:00 до 18:00, по часу
+              </span>
             </label>
           </div>
 

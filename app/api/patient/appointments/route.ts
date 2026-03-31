@@ -1,9 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
+import { isValidHourlySlot } from "@/lib/appointment-slots";
 import { getLkSession } from "@/lib/lk-session";
 import { prisma } from "@/lib/prisma";
 
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
-const TIME_RE = /^([01]?\d|2[0-3]):[0-5]\d$/;
 
 export async function POST(request: NextRequest) {
   const lk = await getLkSession();
@@ -26,7 +26,7 @@ export async function POST(request: NextRequest) {
     (body as { specialistTypeId?: unknown }).specialistTypeId ?? "",
   ).trim();
   const date = String((body as { date?: unknown }).date ?? "").trim();
-  const timeSlot = String((body as { time?: unknown }).time ?? "").trim();
+  const timeSlot = String((body as { timeSlot?: unknown }).timeSlot ?? (body as { time?: unknown }).time ?? "").trim();
 
   if (!specialistTypeId) {
     return NextResponse.json({ error: "Выберите специалиста" }, { status: 400 });
@@ -34,8 +34,8 @@ export async function POST(request: NextRequest) {
   if (!DATE_RE.test(date)) {
     return NextResponse.json({ error: "Некорректная дата" }, { status: 400 });
   }
-  if (!TIME_RE.test(timeSlot)) {
-    return NextResponse.json({ error: "Некорректное время" }, { status: 400 });
+  if (!isValidHourlySlot(timeSlot)) {
+    return NextResponse.json({ error: "Некорректный интервал времени" }, { status: 400 });
   }
 
   const spec = await prisma.specialistType.findUnique({

@@ -7,6 +7,8 @@ import type { ComponentProps } from "react";
 import { useCallback, useEffect, useState } from "react";
 
 const nav = [
+  { href: "/admin/overview", label: "Обзор" },
+  { href: "/admin/requests", label: "Заявки" },
   { href: "/admin/patients", label: "Пациенты" },
   { href: "/admin/specialists", label: "Специалисты" },
   { href: "/admin/settings", label: "Настройки" },
@@ -109,12 +111,12 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
       )}
 
       <aside
-        className={`fixed inset-y-0 left-0 z-50 flex w-[min(288px,88vw)] flex-col border-r border-[#0a1628] bg-[#0c2847] text-[#f0f4fa] shadow-xl transition-transform duration-200 ease-out md:static md:z-auto md:w-64 md:max-w-none md:translate-x-0 md:shadow-none ${
+        className={`fixed inset-y-0 left-0 z-50 flex w-[min(288px,88vw)] flex-col border-r border-[#0a1628] bg-[#0c2847] text-[#f0f4fa] shadow-xl transition-transform duration-200 ease-out md:sticky md:top-0 md:z-auto md:h-svh md:max-h-screen md:w-64 md:max-w-none md:shrink-0 md:translate-x-0 md:self-start md:overflow-hidden md:shadow-none ${
           menuOpen ? "translate-x-0" : "-translate-x-full md:translate-x-0"
         }`}
       >
-        <div className="flex items-center justify-between border-b border-white/10 px-4 py-4 md:block md:px-5 md:py-8">
-          <Link href="/admin/patients" className="block min-w-0" onClick={closeMenu}>
+        <div className="flex shrink-0 items-center justify-between border-b border-white/10 px-4 py-3 md:block md:px-4 md:py-4">
+          <Link href="/admin/overview" className="block min-w-0" onClick={closeMenu}>
             <Image
               src="/logo.png"
               alt=""
@@ -133,22 +135,24 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
             <IconClose className="h-6 w-6" />
           </button>
         </div>
-        <p className="hidden px-5 pb-2 text-xs font-medium uppercase tracking-wider text-white/50 md:block">
+        <p className="hidden px-4 pb-1 text-[10px] font-medium uppercase tracking-wider text-white/50 md:block">
           Администрирование
         </p>
-        <p className="px-4 pb-2 text-xs font-medium uppercase tracking-wider text-white/50 md:hidden">
+        <p className="px-4 pb-1 text-[10px] font-medium uppercase tracking-wider text-white/50 md:hidden">
           Меню
         </p>
-        <nav className="flex flex-1 flex-col gap-1 overflow-y-auto p-3">
+        <nav className="flex min-h-0 flex-1 flex-col gap-0.5 overflow-y-auto p-2 md:overflow-hidden md:p-2">
           {nav.map((item) => {
             const active =
-              pathname === item.href || pathname.startsWith(`${item.href}/`);
+              item.href === "/admin/overview"
+                ? pathname === "/admin/overview" || pathname === "/admin"
+                : pathname === item.href || pathname.startsWith(`${item.href}/`);
             return (
               <Link
                 key={item.href}
                 href={item.href}
                 onClick={closeMenu}
-                className={`rounded-md px-4 py-3 text-sm font-medium transition ${
+                className={`rounded-md px-3 py-2 text-[13px] font-medium leading-snug transition md:py-1.5 ${
                   active
                     ? "bg-[#ee0000] text-white shadow-inner"
                     : "text-white/85 hover:bg-white/10"
@@ -159,28 +163,24 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
             );
           })}
         </nav>
-        <div className="border-t border-white/10 p-3">
+        <div className="shrink-0 border-t border-white/10 p-2">
           <button
             type="button"
             onClick={() => {
               void enterPatientMode();
               closeMenu();
             }}
-            className="mb-2 w-full rounded-md px-4 py-3 text-left text-sm text-white/85 hover:bg-white/10 hover:text-white"
+            className="mb-1 w-full rounded-md px-3 py-2 text-left text-[13px] text-white/85 hover:bg-white/10 hover:text-white"
           >
             Войти как пациент
           </button>
-          <p className="mb-3 hidden px-1 text-xs leading-snug text-white/45 md:block">
-            Откроется личный кабинет с вашими данными; панель администратора
-            будет недоступна, пока не вернётесь из ЛК.
-          </p>
-          <p className="mb-3 px-1 text-xs leading-snug text-white/45 md:hidden">
+          <p className="mb-2 hidden px-1 text-[10px] leading-tight text-white/45 md:block">
             ЛК вместо панели до возврата.
           </p>
           <button
             type="button"
             onClick={() => void logout()}
-            className="w-full rounded-md px-4 py-3 text-left text-sm text-white/70 hover:bg-white/10 hover:text-white"
+            className="w-full rounded-md px-3 py-2 text-left text-[13px] text-white/70 hover:bg-white/10 hover:text-white"
           >
             Выход
           </button>

@@ -14,6 +14,12 @@ enum Role {
   ADMIN
 }
 
+enum AppointmentStatus {
+  NEW
+  AWAITING_PATIENT
+  ARCHIVED
+}
+
 model User {
   id         String    @id @default(cuid())
   phone      String    @unique
@@ -37,16 +43,21 @@ model SpecialistType {
 
 /// Заявка на приём из ЛК пациента
 model AppointmentRequest {
-  id               String         @id @default(cuid())
+  id               String            @id @default(cuid())
   userId           String
-  user             User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user             User              @relation(fields: [userId], references: [id], onDelete: Cascade)
   specialistTypeId String
-  specialistType   SpecialistType @relation(fields: [specialistTypeId], references: [id], onDelete: Restrict)
-  /// Дата приёма YYYY-MM-DD (локальный календарный день)
+  specialistType   SpecialistType    @relation(fields: [specialistTypeId], references: [id], onDelete: Restrict)
+  /// Предпочитаемая дата YYYY-MM-DD
   date             String
-  /// Время HH:mm
+  /// Интервал часа, напр. "09:00-10:00"
   timeSlot         String
-  createdAt        DateTime       @default(now())
+  status           AppointmentStatus @default(NEW)
+  /// Согласованная дата (пометка админа), YYYY-MM-DD
+  adminDate        String?
+  /// Согласованное время (пометка админа), HH:mm
+  adminTime        String?
+  createdAt        DateTime          @default(now())
 }
 
 model PatientDocument {
