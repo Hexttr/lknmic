@@ -1,5 +1,5 @@
 import { AppointmentStatus, Role } from "@prisma/client";
-import { CalendarPlus, Home } from "lucide-react";
+import { CalendarPlus, Home, ListTree } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { prisma } from "@/lib/prisma";
@@ -92,13 +92,20 @@ export default async function LkPage() {
         />
       )}
 
-      <div className="flex justify-center">
+      <div className="flex flex-col items-center gap-3 sm:flex-row sm:justify-center">
         <Link
           href="/lk/appointment"
           className="inline-flex w-full max-w-md items-center justify-center gap-2 rounded-xl bg-emerald-800 px-6 py-4 text-center text-base font-semibold text-white shadow-sm transition hover:bg-emerald-900 sm:w-auto"
         >
           <CalendarPlus className="h-5 w-5 shrink-0" aria-hidden />
           Запись на приём
+        </Link>
+        <Link
+          href="/lk/prices"
+          className="inline-flex w-full max-w-md items-center justify-center gap-2 rounded-xl border-2 border-[#0c2847] bg-white px-6 py-4 text-center text-base font-semibold text-[#0c2847] shadow-sm transition hover:bg-zinc-50 sm:w-auto"
+        >
+          <ListTree className="h-5 w-5 shrink-0" aria-hidden />
+          Услуги и цены
         </Link>
       </div>
 

@@ -21,6 +21,31 @@ enum AppointmentStatus {
   ARCHIVED
 }
 
+enum PriceCatalogNodeKind {
+  GROUP
+  SERVICE
+}
+
+/// Узел дерева «Услуги и цены» (папки и строки прайса)
+model PriceCatalogNode {
+  id        String               @id @default(cuid())
+  parentId  String?
+  parent    PriceCatalogNode?    @relation("PriceCatalogTree", fields: [parentId], references: [id], onDelete: Cascade)
+  children  PriceCatalogNode[]   @relation("PriceCatalogTree")
+  kind      PriceCatalogNodeKind
+  title     String
+  priceText String?
+  sourceUrl String?
+  /// Путь + название + цена для поиска
+  searchBlob String              @default("")
+  sortOrder Int                  @default(0)
+  createdAt DateTime             @default(now())
+  updatedAt DateTime             @updatedAt
+
+  @@index([parentId])
+  @@index([searchBlob])
+}
+
 model User {
   id         String    @id @default(cuid())
   phone      String    @unique
@@ -91,4 +116,10 @@ model RateLimitBucket {
   id        String   @id
   count     Int      @default(0)
   windowEnd DateTime
+}
+
+/// Ключ-значение для настроек из админки (напр. API-ключи)
+model AppSetting {
+  key   String @id
+  value String
 }

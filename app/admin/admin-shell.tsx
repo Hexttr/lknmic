@@ -11,6 +11,7 @@ const nav = [
   { href: "/admin/requests", label: "Заявки", badge: true as const },
   { href: "/admin/patients", label: "Пациенты", badge: false as const },
   { href: "/admin/specialists", label: "Специалисты", badge: false as const },
+  { href: "/admin/prices", label: "Услуги и цены", badge: false as const },
   { href: "/admin/settings", label: "Настройки", badge: false as const },
 ];
 

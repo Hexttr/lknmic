@@ -10,12 +10,20 @@ type AdminRow = {
   createdAt: string;
 };
 
+type AnthropicKeySource = "env" | "database" | "none";
+
 export function SettingsManager() {
   const [admins, setAdmins] = useState<AdminRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [phone, setPhone] = useState("");
   const [saving, setSaving] = useState(false);
+
+  const [anthropicSource, setAnthropicSource] =
+    useState<AnthropicKeySource | null>(null);
+  const [anthropicKeyInput, setAnthropicKeyInput] = useState("");
+  const [anthropicSaving, setAnthropicSaving] = useState(false);
+  const [anthropicMsg, setAnthropicMsg] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     setError(null);
@@ -28,17 +36,28 @@ export function SettingsManager() {
     setAdmins(data.admins);
   }, []);
 
+  const loadAppSettings = useCallback(async () => {
+    const res = await fetch("/api/admin/app-settings", { cache: "no-store" });
+    if (!res.ok) return;
+    const data = (await res.json()) as {
+      anthropicKeySource?: AnthropicKeySource;
+    };
+    if (data.anthropicKeySource) {
+      setAnthropicSource(data.anthropicKeySource);
+    }
+  }, []);
+
   useEffect(() => {
     let cancelled = false;
-    setLoading(true);
     void (async () => {
       await load();
+      await loadAppSettings();
       if (!cancelled) setLoading(false);
     })();
     return () => {
       cancelled = true;
     };
-  }, [load]);
+  }, [load, loadAppSettings]);
 
   async function handleAdd(e: FormEvent) {
     e.preventDefault();
@@ -84,6 +103,34 @@ export function SettingsManager() {
     await load();
   }
 
+  async function saveAnthropicKey(e: FormEvent) {
+    e.preventDefault();
+    setAnthropicSaving(true);
+    setAnthropicMsg(null);
+    try {
+      const res = await fetch("/api/admin/app-settings", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ anthropicApiKey: anthropicKeyInput }),
+      });
+      const data = (await res.json()) as {
+        error?: string;
+        anthropicKeySource?: AnthropicKeySource;
+      };
+      if (!res.ok) {
+        setAnthropicMsg(data.error ?? "Не удалось сохранить");
+        return;
+      }
+      setAnthropicKeyInput("");
+      if (data.anthropicKeySource) {
+        setAnthropicSource(data.anthropicKeySource);
+      }
+      setAnthropicMsg("Сохранено.");
+    } finally {
+      setAnthropicSaving(false);
+    }
+  }
+
   return (
     <div>
       <div className="flex items-center gap-3">
@@ -95,6 +142,79 @@ export function SettingsManager() {
         должен совпадать с тем, по которому человек входит в систему (звонок
         SMS.ru).
       </p>
+
+      <section className="mt-10 max-w-[560px]">
+        <h2 className="text-sm font-semibold uppercase tracking-wide text-zinc-500">
+          ИИ-подбор услуг (Anthropic)
+        </h2>
+        <p className="mt-2 text-sm text-zinc-600">
+          Ключ для чата «Подбор услуги» в личном кабинете пациента. Если задан
+          параметр окружения{" "}
+          <span className="font-mono text-xs">ANTHROPIC_API_KEY</span>, он
+          имеет приоритет; иначе используется ключ из поля ниже.
+        </p>
+
+        {anthropicSource === "env" && (
+          <p className="mt-3 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-900">
+            Сейчас используется ключ из переменной окружения{" "}
+            <span className="font-mono">ANTHROPIC_API_KEY</span>. Сохранение в
+            форме недоступно, пока переменная задана.
+          </p>
+        )}
+
+        {anthropicSource === "database" && (
+          <p className="mt-3 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-900">
+            Ключ сохранён в базе данных. Введите новый ключ, чтобы заменить, или
+            очистите поле и нажмите «Сохранить», чтобы удалить.
+          </p>
+        )}
+
+        {anthropicSource === "none" && (
+          <p className="mt-3 text-sm text-zinc-600">
+            Ключ не задан — подбор по ИИ в ЛК пациента будет недоступен, пока вы
+            не укажете ключ здесь или в окружении.
+          </p>
+        )}
+
+        {anthropicMsg && (
+          <p className="mt-3 text-sm text-zinc-700" role="status">
+            {anthropicMsg}
+          </p>
+        )}
+
+        <form
+          onSubmit={saveAnthropicKey}
+          className="mt-4 rounded-lg border border-zinc-200 bg-white p-5 shadow-sm"
+        >
+          <label className="flex flex-col gap-1 text-sm">
+            <span className="text-zinc-700">
+              API-ключ Anthropic{" "}
+              <span className="font-normal text-zinc-500">
+                (скрыто после сохранения)
+              </span>
+            </span>
+            <input
+              type="password"
+              name="anthropic-api-key"
+              autoComplete="off"
+              value={anthropicKeyInput}
+              onChange={(e) => setAnthropicKeyInput(e.target.value)}
+              placeholder="sk-ant-api03-…"
+              disabled={anthropicSource === "env"}
+              className="rounded-md border border-zinc-300 px-3 py-2 font-mono text-sm text-zinc-900 disabled:bg-zinc-100"
+            />
+          </label>
+          <div className="mt-4 flex flex-wrap gap-2">
+            <button
+              type="submit"
+              disabled={anthropicSaving || anthropicSource === "env"}
+              className="rounded-md bg-[#0c2847] px-5 py-2 text-sm font-medium text-white hover:bg-[#0a1f38] disabled:opacity-50"
+            >
+              {anthropicSaving ? "Сохранение…" : "Сохранить ключ"}
+            </button>
+          </div>
+        </form>
+      </section>
 
       <section className="mt-10 max-w-[560px]">
         <h2 className="text-sm font-semibold uppercase tracking-wide text-zinc-500">
