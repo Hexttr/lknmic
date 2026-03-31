@@ -1,7 +1,13 @@
 "use client";
 
 import { FolderTree, Search, Tag } from "lucide-react";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import {
+  useCallback,
+  useDeferredValue,
+  useEffect,
+  useMemo,
+  useState,
+} from "react";
 
 type Kind = "GROUP" | "SERVICE";
 
@@ -12,7 +18,11 @@ type Node = {
   title: string;
   priceText: string | null;
   sortOrder: number;
+  searchBlob: string;
 };
+
+/** Максимум строк в режиме поиска (остальные — через уточнение запроса). */
+const MAX_SEARCH_ROWS = 500;
 
 function buildChildrenMap(nodes: Node[]): Map<string | null, Node[]> {
   const byParent = new Map<string | null, Node[]>();
@@ -45,12 +55,61 @@ function pathLabels(
   return parts;
 }
 
+function SearchResultsList({
+  nodes,
+  filteredIds,
+  byId,
+  totalMatches,
+}: {
+  nodes: Node[];
+  filteredIds: Set<string> | null;
+  byId: Map<string, Node>;
+  totalMatches: number;
+}) {
+  if (!filteredIds) return null;
+  const sorted = nodes
+    .filter((n) => filteredIds.has(n.id))
+    .sort(
+      (a, b) =>
+        a.sortOrder - b.sortOrder || a.title.localeCompare(b.title, "ru"),
+    );
+  const capped = sorted.slice(0, MAX_SEARCH_ROWS);
+  const overflow = sorted.length - capped.length;
+
+  return (
+    <div className="rounded-xl border border-zinc-200 bg-white">
+      <p className="border-b border-zinc-100 px-4 py-2 text-xs text-zinc-500">
+        Найдено совпадений: {totalMatches}
+        {overflow > 0
+          ? ` · показаны первые ${MAX_SEARCH_ROWS} — уточните запрос`
+          : ""}
+      </p>
+      <ul className="divide-y divide-zinc-100">
+        {capped.map((n) => (
+          <li key={n.id} className="px-4 py-3">
+            <p className="text-xs text-zinc-500">
+              {pathLabels(n.id, byId).join(" → ")}
+            </p>
+            <div className="mt-1 flex flex-wrap items-baseline justify-between gap-2">
+              <span className="font-medium text-zinc-900">{n.title}</span>
+              {n.kind === "SERVICE" && n.priceText && (
+                <span className="text-emerald-800">{n.priceText}</span>
+              )}
+            </div>
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+
 export function PricesCatalogView() {
   const [nodes, setNodes] = useState<Node[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [query, setQuery] = useState("");
   const [expanded, setExpanded] = useState<Record<string, boolean>>({});
+  const deferredQuery = useDeferredValue(query);
 
   const load = useCallback(async () => {
     setError(null);
@@ -60,7 +119,12 @@ export function PricesCatalogView() {
       return;
     }
     const data = (await res.json()) as { nodes: Node[] };
-    setNodes(data.nodes);
+    setNodes(
+      data.nodes.map((n) => ({
+        ...n,
+        searchBlob: n.searchBlob ?? "",
+      })),
+    );
   }, []);
 
   useEffect(() => {
@@ -82,34 +146,16 @@ export function PricesCatalogView() {
 
   const byParent = useMemo(() => buildChildrenMap(nodes), [nodes]);
 
-  const q = query.trim().toLowerCase();
+  const q = deferredQuery.trim().toLowerCase();
 
   const filteredIds = useMemo(() => {
     if (!q) return null;
     const ids = new Set<string>();
     for (const n of nodes) {
-      const path = pathLabels(n.id, byId).join(" ").toLowerCase();
-      const blob = `${path} ${(n.priceText ?? "").toLowerCase()}`;
-      if (blob.includes(q)) ids.add(n.id);
+      if (n.searchBlob.includes(q)) ids.add(n.id);
     }
     return ids;
-  }, [nodes, byId, q]);
-
-  const visibleSubtree = useMemo(() => {
-    if (!filteredIds) return null;
-    const keep = new Set<string>();
-    for (const id of filteredIds) {
-      let cur: string | undefined = id;
-      const guard = new Set<string>();
-      while (cur && !guard.has(cur)) {
-        guard.add(cur);
-        keep.add(cur);
-        const n = byId.get(cur);
-        cur = n?.parentId ?? undefined;
-      }
-    }
-    return keep;
-  }, [filteredIds, byId]);
+  }, [nodes, q]);
 
   const toggle = (id: string) => {
     setExpanded((e) => ({ ...e, [id]: !e[id] }));
@@ -142,40 +188,24 @@ export function PricesCatalogView() {
             autoComplete="off"
           />
         </span>
+        {query.trim() !== deferredQuery.trim() && query.trim() !== "" && (
+          <span className="text-xs text-zinc-500" aria-live="polite">
+            Уточняем поиск…
+          </span>
+        )}
       </label>
 
       {nodes.length === 0 ? (
         <p className="rounded-xl border border-dashed border-zinc-300 bg-zinc-50 px-4 py-8 text-center text-sm text-zinc-600">
           Прайс пока не заполнен. Загляните позже.
         </p>
-      ) : q && visibleSubtree ? (
-        <div className="rounded-xl border border-zinc-200 bg-white">
-          <p className="border-b border-zinc-100 px-4 py-2 text-xs text-zinc-500">
-            Найдено совпадений: {filteredIds?.size ?? 0}
-          </p>
-          <ul className="divide-y divide-zinc-100">
-            {nodes
-              .filter((n) => filteredIds?.has(n.id))
-              .sort(
-                (a, b) =>
-                  a.sortOrder - b.sortOrder ||
-                  a.title.localeCompare(b.title, "ru"),
-              )
-              .map((n) => (
-                <li key={n.id} className="px-4 py-3">
-                  <p className="text-xs text-zinc-500">
-                    {pathLabels(n.id, byId).join(" → ")}
-                  </p>
-                  <div className="mt-1 flex flex-wrap items-baseline justify-between gap-2">
-                    <span className="font-medium text-zinc-900">{n.title}</span>
-                    {n.kind === "SERVICE" && n.priceText && (
-                      <span className="text-emerald-800">{n.priceText}</span>
-                    )}
-                  </div>
-                </li>
-              ))}
-          </ul>
-        </div>
+      ) : q ? (
+        <SearchResultsList
+          nodes={nodes}
+          filteredIds={filteredIds}
+          byId={byId}
+          totalMatches={filteredIds?.size ?? 0}
+        />
       ) : (
         <ul className="overflow-hidden rounded-xl border border-zinc-200 bg-white">
           <TreeLevel
@@ -221,9 +251,9 @@ function TreeLevel({
                 type="button"
                 onClick={() => onToggle(node.id)}
                 className="mt-0.5 shrink-0 rounded border border-zinc-300 px-1.5 py-0 text-xs text-zinc-600 hover:bg-zinc-50"
-                aria-expanded={expanded[node.id] !== false}
+                aria-expanded={expanded[node.id] === true}
               >
-                {expanded[node.id] === false ? "+" : "−"}
+                {expanded[node.id] === true ? "−" : "+"}
               </button>
             ) : (
               <span className="mt-0.5 w-6 shrink-0" aria-hidden />
@@ -242,7 +272,7 @@ function TreeLevel({
               )}
             </div>
           </div>
-          {node.kind === "GROUP" && expanded[node.id] !== false && (
+          {node.kind === "GROUP" && expanded[node.id] === true && (
             <ul className="list-none">
               <TreeLevel
                 parentId={node.id}

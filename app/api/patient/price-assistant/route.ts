@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { PriceCatalogNodeKind } from "@prisma/client";
 import {
+  formatAnthropicErrorForUser,
   getAnthropicApiKey,
   runPriceAssistantModel,
 } from "@/lib/anthropic-price-assistant";
@@ -127,6 +128,9 @@ ${catalogBlock || "(пусто — скажи, что прайс не загру
     if (msg === "missing_api_key") {
       return NextResponse.json({ error: "Ключ API не настроен" }, { status: 503 });
     }
-    return NextResponse.json({ error: "Ошибка ИИ. Попробуйте позже." }, { status: 502 });
+    return NextResponse.json(
+      { error: formatAnthropicErrorForUser(e) },
+      { status: 502 },
+    );
   }
 }

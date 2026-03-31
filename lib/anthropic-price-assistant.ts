@@ -44,14 +44,22 @@ export async function runPriceAssistantModel(
     }),
   });
 
-  const raw = (await res.json()) as {
-    error?: { message?: string };
+  const bodyText = await res.text();
+  let raw: {
+    error?: { message?: string; type?: string };
     content?: { type: string; text?: string }[];
   };
+  try {
+    raw = JSON.parse(bodyText) as typeof raw;
+  } catch {
+    throw new Error(
+      `anthropic_http:${res.status}:${bodyText.slice(0, 300)}`,
+    );
+  }
 
   if (!res.ok) {
     const msg = raw.error?.message ?? res.statusText;
-    throw new Error(`anthropic_http: ${msg}`);
+    throw new Error(`anthropic_http:${res.status}:${msg}`);
   }
 
   const block = raw.content?.find((c) => c.type === "text");
@@ -61,4 +69,70 @@ export async function runPriceAssistantModel(
   }
 
   return text;
+}
+
+/**
+ * Человекочитаемое сообщение для UI (без утечки сырого ответа в прод).
+ */
+export function formatAnthropicErrorForUser(err: unknown): string {
+  if (!(err instanceof Error)) {
+    return "Ошибка ИИ. Попробуйте позже.";
+  }
+  const m = err.message;
+  if (m === "missing_api_key") {
+    return "Ключ API не настроен.";
+  }
+  if (m === "anthropic_empty") {
+    return "Пустой ответ от модели. Попробуйте ещё раз.";
+  }
+
+  const http = /^anthropic_http:(\d+):([\s\S]+)$/.exec(m);
+  if (http) {
+    const status = parseInt(http[1], 10);
+    const rest = http[2].toLowerCase();
+
+    if (status === 401) {
+      return "Ключ API отклонён. Проверьте ключ в Настройки → AI или переменную ANTHROPIC_API_KEY.";
+    }
+    const looksGeoRestricted =
+      (rest.includes("not available") && rest.includes("country")) ||
+      (rest.includes("unsupported") && rest.includes("region")) ||
+      rest.includes("geographic");
+    if (looksGeoRestricted) {
+      return (
+        "Доступ к Anthropic с IP вашего сервера ограничен по региону. " +
+        "VPN в браузере не помогает: запрос к API выполняет машина, где запущен сайт. " +
+        "Нужен VPN/прокси на сервере или хостинг в поддерживаемой стране."
+      );
+    }
+    if (status === 403) {
+      return "Доступ к API запрещён (403). Проверьте ключ и права аккаунта Anthropic.";
+    }
+    if (status === 404 || rest.includes("model:") || rest.includes("model not found")) {
+      return (
+        "Неверное имя модели. Задайте ANTHROPIC_MODEL в окружении (актуальный ID в консоли Anthropic)."
+      );
+    }
+    if (status === 400) {
+      return `Запрос отклонён сервисом: ${http[2].slice(0, 180)}`;
+    }
+    if (status === 429) {
+      return "Слишком много запросов к Anthropic. Подождите немного.";
+    }
+    return (
+      "Сервис Anthropic вернул ошибку. Если сервер в РФ или за жёстким firewall, " +
+      "часто нужен выход в интернет из региона с поддержкой API."
+    );
+  }
+
+  if (
+    m.includes("fetch failed") ||
+    m.includes("ECONNREFUSED") ||
+    m.includes("ENOTFOUND") ||
+    m.includes("ETIMEDOUT")
+  ) {
+    return "Не удалось связаться с api.anthropic.com с сервера. Проверьте сеть, DNS и firewall.";
+  }
+
+  return "Ошибка ИИ. Попробуйте позже.";
 }

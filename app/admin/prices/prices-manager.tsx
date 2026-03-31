@@ -163,9 +163,9 @@ function TreeLevel({
                 type="button"
                 onClick={() => onToggle(node.id)}
                 className="mt-0.5 shrink-0 rounded border border-zinc-300 px-1.5 py-0 text-xs text-zinc-600 hover:bg-zinc-50"
-                aria-expanded={expanded[node.id] !== false}
+                aria-expanded={expanded[node.id] === true}
               >
-                {expanded[node.id] === false ? "+" : "−"}
+                {expanded[node.id] === true ? "−" : "+"}
               </button>
             ) : (
               <span className="mt-0.5 w-6 shrink-0" aria-hidden />
@@ -212,7 +212,7 @@ function TreeLevel({
               </button>
             </div>
           </div>
-          {node.kind === "GROUP" && expanded[node.id] !== false && (
+          {node.kind === "GROUP" && expanded[node.id] === true && (
             <ul className="list-none">
               <TreeLevel
                 parentId={node.id}

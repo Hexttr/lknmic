@@ -9,6 +9,8 @@ const selectPublic = {
   title: true,
   priceText: true,
   sortOrder: true,
+  /// Денормализованный путь+текст для быстрого поиска на клиенте
+  searchBlob: true,
 } as const;
 
 export async function GET(request: NextRequest) {
@@ -28,9 +30,7 @@ export async function GET(request: NextRequest) {
   }
 
   const nodes = await prisma.priceCatalogNode.findMany({
-    where: {
-      searchBlob: { contains: q },
-    },
+    where: { searchBlob: { contains: q } },
     orderBy: [{ sortOrder: "asc" }, { title: "asc" }],
     select: selectPublic,
   });
