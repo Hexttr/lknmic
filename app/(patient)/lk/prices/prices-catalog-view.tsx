@@ -24,6 +24,35 @@ type Node = {
 /** Максимум строк в режиме поиска (остальные — через уточнение запроса). */
 const MAX_SEARCH_ROWS = 500;
 
+/**
+ * Извлекает число рублей для сортировки (диапазон «a — b» → максимум).
+ * Без распознаванной суммы — null (в конце списка при сортировке «дороже → дешевле»).
+ */
+function parsePriceRubles(priceText: string | null): number | null {
+  if (!priceText?.trim()) return null;
+  const raw = priceText.replace(/\u00a0/g, " ");
+  const segments = raw.split(/[—\-–]+/);
+  let best: number | null = null;
+  for (const seg of segments) {
+    const digits = seg.replace(/\s/g, "").replace(/[^\d]/g, "");
+    if (digits.length === 0) continue;
+    const n = parseInt(digits, 10);
+    if (!Number.isNaN(n) && (best === null || n > best)) best = n;
+  }
+  return best;
+}
+
+function sortSearchByPriceDesc(a: Node, b: Node): number {
+  const pa = parsePriceRubles(a.priceText);
+  const pb = parsePriceRubles(b.priceText);
+  if (pa !== null && pb !== null && pa !== pb) return pb - pa;
+  if (pa !== null && pb === null) return -1;
+  if (pa === null && pb !== null) return 1;
+  return (
+    a.sortOrder - b.sortOrder || a.title.localeCompare(b.title, "ru")
+  );
+}
+
 function buildChildrenMap(nodes: Node[]): Map<string | null, Node[]> {
   const byParent = new Map<string | null, Node[]>();
   for (const n of nodes) {
@@ -69,10 +98,7 @@ function SearchResultsList({
   if (!filteredIds) return null;
   const sorted = nodes
     .filter((n) => filteredIds.has(n.id))
-    .sort(
-      (a, b) =>
-        a.sortOrder - b.sortOrder || a.title.localeCompare(b.title, "ru"),
-    );
+    .sort(sortSearchByPriceDesc);
   const capped = sorted.slice(0, MAX_SEARCH_ROWS);
   const overflow = sorted.length - capped.length;
 
@@ -80,6 +106,7 @@ function SearchResultsList({
     <div className="rounded-xl border border-zinc-200 bg-white">
       <p className="border-b border-zinc-100 px-4 py-2 text-xs text-zinc-500">
         Найдено совпадений: {totalMatches}
+        {totalMatches > 0 ? " · сначала дороже, затем дешевле" : ""}
         {overflow > 0
           ? ` · показаны первые ${MAX_SEARCH_ROWS} — уточните запрос`
           : ""}
