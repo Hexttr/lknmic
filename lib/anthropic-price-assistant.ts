@@ -1,9 +1,29 @@
+import { fetch as undiciFetch, ProxyAgent } from "undici";
+
 import { prisma } from "@/lib/prisma";
 import { APP_SETTING_ANTHROPIC_API_KEY } from "@/lib/app-settings-keys";
 
 type Msg = { role: "user" | "assistant"; content: string };
 
 const DEFAULT_MODEL = "claude-sonnet-4-20250514";
+
+/** Исходящий HTTPS-прокси только для Anthropic (например EU/US VPS). См. ANTHROPIC_HTTPS_PROXY. */
+function anthropicFetch(
+  input: string | URL,
+  init?: RequestInit,
+): Promise<Response> {
+  const proxyUrl =
+    process.env.ANTHROPIC_HTTPS_PROXY?.trim() ||
+    process.env.ANTHROPIC_PROXY?.trim();
+  if (!proxyUrl) {
+    return fetch(input, init);
+  }
+  const agent = new ProxyAgent(proxyUrl);
+  return undiciFetch(
+    input,
+    { ...init, dispatcher: agent } as Parameters<typeof undiciFetch>[1],
+  ) as unknown as Promise<Response>;
+}
 
 /** Сначала `ANTHROPIC_API_KEY` из окружения, иначе значение из админки (БД). */
 export async function getAnthropicApiKey(): Promise<string | null> {
@@ -29,7 +49,7 @@ export async function runPriceAssistantModel(
 
   const model = process.env.ANTHROPIC_MODEL ?? DEFAULT_MODEL;
 
-  const res = await fetch("https://api.anthropic.com/v1/messages", {
+  const res = await anthropicFetch("https://api.anthropic.com/v1/messages", {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -106,7 +126,10 @@ export function formatAnthropicErrorForUser(err: unknown): string {
       );
     }
     if (status === 403) {
-      return "Доступ к API запрещён (403). Проверьте ключ и права аккаунта Anthropic.";
+      return (
+        "Доступ к Anthropic запрещён (403). Часто так бывает для серверов в РФ или при ограничениях аккаунта. " +
+        "Проверьте ключ и консоль Anthropic; при необходимости настройте исходящий прокси на сервере (ANTHROPIC_HTTPS_PROXY в .env)."
+      );
     }
     if (status === 404 || rest.includes("model:") || rest.includes("model not found")) {
       return (
