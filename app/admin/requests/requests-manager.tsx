@@ -25,21 +25,59 @@ const STATUS_LABEL: Record<AppointmentRow["status"], string> = {
   ARCHIVED: "Архив",
 };
 
+type SpecialistOption = { id: string; name: string };
+
+function formatReceivedAt(iso: string): string {
+  try {
+    return new Date(iso).toLocaleString("ru-RU", {
+      dateStyle: "short",
+      timeStyle: "short",
+    });
+  } catch {
+    return "—";
+  }
+}
+
 export function RequestsManager() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const specialistFilter = searchParams.get("specialistId")?.trim() ?? "";
   const archiveView = searchParams.get("archive") === "1";
+  const sortOrder = searchParams.get("order")?.trim().toLowerCase() === "asc" ? "asc" : "desc";
 
-  function setArchiveView(on: boolean) {
+  function replaceQuery(next: {
+    specialistId?: string | null;
+    archive?: boolean;
+    order?: "asc" | "desc";
+  }) {
     const p = new URLSearchParams(searchParams.toString());
-    if (on) {
-      p.set("archive", "1");
-    } else {
-      p.delete("archive");
+    if (next.specialistId !== undefined) {
+      if (next.specialistId) {
+        p.set("specialistId", next.specialistId);
+      } else {
+        p.delete("specialistId");
+      }
+    }
+    if (next.archive !== undefined) {
+      if (next.archive) {
+        p.set("archive", "1");
+      } else {
+        p.delete("archive");
+      }
+    }
+    if (next.order !== undefined) {
+      if (next.order === "desc") {
+        p.delete("order");
+      } else {
+        p.set("order", "asc");
+      }
     }
     const q = p.toString();
     router.replace(q ? `/admin/requests?${q}` : "/admin/requests");
+  }
+
+  function setArchiveView(on: boolean) {
+    replaceQuery({ archive: on });
   }
 
   const [rows, setRows] = useState<AppointmentRow[]>([]);
@@ -51,6 +89,7 @@ export function RequestsManager() {
   const [adminDate, setAdminDate] = useState("");
   const [adminTime, setAdminTime] = useState("");
   const [saving, setSaving] = useState(false);
+  const [specialists, setSpecialists] = useState<SpecialistOption[]>([]);
 
   const load = useCallback(async () => {
     setError(null);
@@ -60,6 +99,9 @@ export function RequestsManager() {
     }
     if (archiveView) {
       params.set("archived", "1");
+    }
+    if (sortOrder === "asc") {
+      params.set("order", "asc");
     }
     const q = params.toString();
     const res = await fetch(
@@ -72,7 +114,20 @@ export function RequestsManager() {
     }
     const data = (await res.json()) as { appointments: AppointmentRow[] };
     setRows(data.appointments);
-  }, [specialistFilter, archiveView]);
+  }, [specialistFilter, archiveView, sortOrder]);
+
+  const loadSpecialists = useCallback(async () => {
+    const res = await fetch("/api/admin/specialist-types", { cache: "no-store" });
+    if (!res.ok) return;
+    const data = (await res.json()) as {
+      specialistTypes: SpecialistOption[];
+    };
+    setSpecialists(data.specialistTypes ?? []);
+  }, []);
+
+  useEffect(() => {
+    void loadSpecialists();
+  }, [loadSpecialists]);
 
   useEffect(() => {
     let cancelled = false;
@@ -144,19 +199,6 @@ export function RequestsManager() {
               ? "Заявки со статусом «Архив». Активные заявки — в разделе «Заявки»."
               : "Заявки на приём из личных кабинетов пациентов. Укажите согласованные дату и время после звонка клиенту."}
           </p>
-          {specialistFilter && (
-            <p className="mt-2 text-sm text-[#0c2847]">
-              Фильтр по специалисту активен.{" "}
-              <a
-                href={
-                  archiveView ? "/admin/requests?archive=1" : "/admin/requests"
-                }
-                className="underline"
-              >
-                Показать все
-              </a>
-            </p>
-          )}
         </div>
         <button
           type="button"
@@ -173,6 +215,43 @@ export function RequestsManager() {
         </button>
       </div>
 
+      <div className="mt-6 flex flex-col gap-4 rounded-xl border border-zinc-200 bg-white p-4 shadow-sm sm:flex-row sm:flex-wrap sm:items-end">
+        <label className="flex min-w-[200px] flex-1 flex-col gap-1.5 text-sm">
+          <span className="font-medium text-zinc-800">Специалист</span>
+          <select
+            value={specialistFilter}
+            onChange={(e) =>
+              replaceQuery({ specialistId: e.target.value || null })
+            }
+            className="rounded-lg border border-zinc-300 bg-white px-3 py-2 text-zinc-900"
+          >
+            <option value="">Все специалисты</option>
+            {specialists.map((s) => (
+              <option key={s.id} value={s.id}>
+                {s.name}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label className="flex min-w-[220px] flex-col gap-1.5 text-sm">
+          <span className="font-medium text-zinc-800">
+            По времени поступления
+          </span>
+          <select
+            value={sortOrder}
+            onChange={(e) =>
+              replaceQuery({
+                order: e.target.value === "asc" ? "asc" : "desc",
+              })
+            }
+            className="rounded-lg border border-zinc-300 bg-white px-3 py-2 text-zinc-900"
+          >
+            <option value="desc">Сначала новые</option>
+            <option value="asc">Сначала старые</option>
+          </select>
+        </label>
+      </div>
+
       {error && (
         <p className="mt-4 text-sm text-red-600" role="alert">
           {error}
@@ -187,10 +266,11 @@ export function RequestsManager() {
         </p>
       ) : (
         <div className="mt-8 overflow-x-auto rounded-xl border border-zinc-200 bg-white shadow-sm">
-          <table className="min-w-[900px] w-full text-left text-sm text-zinc-900">
+          <table className="min-w-[1000px] w-full text-left text-sm text-zinc-900">
             <thead className="border-b border-zinc-200 bg-zinc-50 text-xs font-semibold uppercase text-zinc-700">
               <tr>
                 <th className="px-4 py-3">Телефон</th>
+                <th className="px-4 py-3">Поступила</th>
                 <th className="px-4 py-3">Специалист</th>
                 <th className="px-4 py-3">Предпочт. дата</th>
                 <th className="px-4 py-3">Предпочт. время</th>
@@ -205,6 +285,9 @@ export function RequestsManager() {
                 <tr key={r.id} className="hover:bg-zinc-50/80">
                   <td className="px-4 py-3 font-mono text-zinc-900">
                     {r.user.phone}
+                  </td>
+                  <td className="whitespace-nowrap px-4 py-3 text-sm text-zinc-800">
+                    {formatReceivedAt(r.createdAt)}
                   </td>
                   <td className="px-4 py-3 text-zinc-900">
                     <span className="inline-flex items-center gap-2">

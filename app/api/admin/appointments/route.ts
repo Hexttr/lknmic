@@ -16,6 +16,9 @@ export async function GET(request: NextRequest) {
     archivedParam === "1" ||
     archivedParam?.toLowerCase() === "true";
 
+  const orderParam = request.nextUrl.searchParams.get("order")?.trim().toLowerCase();
+  const createdAtOrder = orderParam === "asc" ? "asc" : "desc";
+
   const rows = await prisma.appointmentRequest.findMany({
     where: {
       ...(specialistId ? { specialistTypeId: specialistId } : {}),
@@ -23,7 +26,7 @@ export async function GET(request: NextRequest) {
         ? { status: AppointmentStatus.ARCHIVED }
         : { status: { not: AppointmentStatus.ARCHIVED } }),
     },
-    orderBy: { createdAt: "desc" },
+    orderBy: { createdAt: createdAtOrder },
     include: {
       user: { select: { phone: true } },
       specialistType: { select: { name: true, iconKey: true } },
