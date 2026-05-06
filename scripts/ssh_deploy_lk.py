@@ -18,10 +18,6 @@ import paramiko
 
 from deploy_env import load_deploy_env
 
-# Override: LK_SSH_HOST, LK_APP_DIR
-HOST = os.environ.get("LK_SSH_HOST", "5.129.249.151")
-USER = os.environ.get("LK_SSH_USER", "root")
-APP = os.environ.get("LK_APP_DIR", "/var/www/lk.nmiczd.ru")
 CLONE = "/tmp/lknmic-deploy-src"
 REPO = "https://github.com/Hexttr/lknmic.git"
 
@@ -48,9 +44,19 @@ def main() -> None:
         print("Set env SSH_PASS", file=sys.stderr)
         sys.exit(1)
 
+    host = os.environ.get("LK_SSH_HOST", "5.129.249.151")
+    user = os.environ.get("LK_SSH_USER", "root")
+    app = os.environ.get("LK_APP_DIR", "/var/www/lk.nmiczd.ru")
+
     c = paramiko.SSHClient()
     c.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-    c.connect(HOST, username=USER, password=pw, timeout=120)
+    c.connect(host, username=user, password=pw, timeout=120)
+
+    pm2_or_start = (
+        f"cd {app} && "
+        f"(pm2 describe lk-nmiczd >/dev/null 2>&1 && pm2 restart lk-nmiczd --update-env "
+        f"|| pm2 start ecosystem.config.cjs) && pm2 save"
+    )
 
     steps = [
         ("rm -rf " + CLONE, 60),
@@ -60,14 +66,14 @@ def main() -> None:
             "--exclude .env --exclude data --exclude dev.db "
             + CLONE
             + "/ "
-            + APP
+            + app
             + "/",
             120,
         ),
-        ("cd " + APP + " && npm ci", 600),
-        ("cd " + APP + " && npx prisma migrate deploy", 120),
-        ("cd " + APP + " && npm run build", 600),
-        ("pm2 restart lk-nmiczd --update-env", 60),
+        ("cd " + app + " && npm ci", 600),
+        ("cd " + app + " && npx prisma migrate deploy", 120),
+        ("cd " + app + " && npm run build", 600),
+        (pm2_or_start, 120),
     ]
 
     for cmd, tmo in steps:

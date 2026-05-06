@@ -2,7 +2,7 @@
 
 ## Где живёт приложение
 
-- **Сервер:** `LK_SSH_HOST` (по умолчанию `5.129.249.151`), пользователь `root` или `LK_SSH_USER`.
+- **Сервер:** `LK_SSH_HOST` (в `deploy/.env`; для старого VPS по умолчанию в коде `5.129.249.151` и `root`, для нового — задайте `178.170.165.72` и `user_adm`).
 - **Каталог на сервере:** `LK_APP_DIR` (по умолчанию `/var/www/lk.nmiczd.ru`).
 - **Процесс PM2:** только `lk-nmiczd` (порт **3010**, `npm run start:prod`). Другие приложения (например `kid-doctor`) **не трогаем**.
 - **БД:** SQLite `DATABASE_URL=file:./data/prod.db` — каталог `data/` при деплое **не перезаписывается** (исключение в `rsync`).
@@ -30,7 +30,20 @@ python scripts/ssh_deploy_lk.py
 1. `git clone --depth 1` репозитория в `/tmp/lknmic-deploy-src`
 2. `rsync` в `LK_APP_DIR` с исключениями: `.env`, `data/`, `dev.db`, `node_modules`, `.next`, `.git`
 3. `npm ci` → `npx prisma migrate deploy` → `npm run build`
-4. `pm2 restart lk-nmiczd --update-env`
+4. `pm2 restart lk-nmiczd --update-env` или первый запуск: `pm2 start ecosystem.config.cjs`, затем `pm2 save`
+
+### Первичная настройка lk на новом VPS (`user_adm`, sudo)
+
+Один раз (каталог, nginx `lk.nmiczd.ru`, снятие конфликта с тестовым vhost `ava` / процессом `ava-nmiczd` на том же порту 3010):
+
+```powershell
+python scripts/ssh_prepare_lk_new_host.py
+python scripts/ssh_bootstrap_lk_env.py
+python scripts/ssh_deploy_lk.py
+python scripts/ssh_certbot_lk.py
+```
+
+`ssh_bootstrap_lk_env.py` создаёт минимальный `.env` только если его ещё нет. Для HTTPS: DNS **A** `lk.nmiczd.ru` → IP сервера, порт 80 доступен снаружи.
 
 Переменные окружения (опционально): `LK_SSH_HOST`, `LK_SSH_USER`, `LK_APP_DIR`.
 
