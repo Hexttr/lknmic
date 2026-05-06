@@ -11,10 +11,6 @@ import paramiko
 
 from deploy_env import load_deploy_env
 
-HOST = os.environ.get("LK_SSH_HOST", "5.129.249.151")
-USER = os.environ.get("LK_SSH_USER", "root")
-APP_DIR = os.environ.get("LK_APP_DIR", "/var/www/lk.nmiczd.ru")
-
 
 def run(c: paramiko.SSHClient, cmd: str) -> str:
     _, out, err = c.exec_command(cmd)
@@ -30,9 +26,11 @@ def main() -> None:
     if not pw:
         print("Set SSH_PASS", file=sys.stderr)
         sys.exit(1)
+    host = os.environ.get("LK_SSH_HOST", "5.129.249.151")
+    user = os.environ.get("LK_SSH_USER", "root")
     c = paramiko.SSHClient()
     c.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-    c.connect(HOST, username=USER, password=pw, timeout=60)
+    c.connect(host, username=user, password=pw, timeout=60)
     for cmd in sys.argv[1:]:
         print(f"\n=== {cmd} ===\n")
         print(run(c, cmd))
