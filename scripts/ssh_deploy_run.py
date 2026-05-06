@@ -11,9 +11,9 @@ import paramiko
 
 from deploy_env import load_deploy_env
 
-HOST = "5.129.249.151"
-USER = "root"
-APP_DIR = "/var/www/lk.nmiczd.ru"
+HOST = os.environ.get("LK_SSH_HOST", "5.129.249.151")
+USER = os.environ.get("LK_SSH_USER", "root")
+APP_DIR = os.environ.get("LK_APP_DIR", "/var/www/lk.nmiczd.ru")
 
 
 def run(c: paramiko.SSHClient, cmd: str) -> str:
