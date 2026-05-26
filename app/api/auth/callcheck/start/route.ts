@@ -82,12 +82,21 @@ export async function POST(request: NextRequest) {
 
   const expiresAt = new Date(Date.now() + PENDING_TTL_MS);
 
-  const pending = await prisma.pendingAuth.create({
-    data: {
+  // SMS.ru can reuse the same check_id for repeated attempts on one phone
+  // within the active window. Reuse that row instead of failing on UNIQUE.
+  const pending = await prisma.pendingAuth.upsert({
+    where: { checkId: smsResult.checkId },
+    create: {
       checkId: smsResult.checkId,
       phone: normalized,
       ipHash,
       expiresAt,
+    },
+    update: {
+      phone: normalized,
+      ipHash,
+      expiresAt,
+      verified: false,
     },
   });
 

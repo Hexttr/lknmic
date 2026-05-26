@@ -9,6 +9,13 @@ export type SessionData = {
   patientMode?: boolean;
 };
 
+function secureCookieEnabled(): boolean {
+  const override = process.env.SESSION_COOKIE_SECURE?.trim().toLowerCase();
+  if (override === "true") return true;
+  if (override === "false") return false;
+  return process.env.NODE_ENV === "production";
+}
+
 function sessionPassword(): string {
   const p = process.env.SESSION_SECRET;
   if (!p || p.length < 32) {
@@ -26,7 +33,7 @@ export function getSessionOptions(): SessionOptions {
     ttl: 60 * 60 * 24 * 14,
     cookieOptions: {
       httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
+      secure: secureCookieEnabled(),
       sameSite: "lax",
       path: "/",
     },
